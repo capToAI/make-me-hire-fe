@@ -43,8 +43,11 @@ export function PreviewPanel({ state }: { state: ResumeState }) {
   useLayoutEffect(() => {
     if (!measureRef.current || !sampleContentRef.current) return;
 
-    // Measure printable area height
-    const printableHeight = sampleContentRef.current.clientHeight || 930;
+    // Measure printable area height with safety buffer for margin spacing
+    const printableHeight = Math.max(
+      600,
+      (sampleContentRef.current.clientHeight || 930) - 24
+    );
     setMaxPageHeight(printableHeight);
 
     // Measure block heights
@@ -111,7 +114,10 @@ export function PreviewPanel({ state }: { state: ResumeState }) {
   const handleZoomReset = () => setZoomLevel(1.0);
 
   return (
-    <div ref={outerRef} className="flex-1 min-w-0 lg:h-full flex flex-col bg-zinc-200/90 overflow-hidden">
+    <div
+      ref={outerRef}
+      className="flex-1 min-w-0 min-h-0 lg:h-full flex flex-col bg-zinc-200/90 overflow-hidden"
+    >
       {/* Toolbar / Header */}
       <div className="no-print bg-white border-b border-zinc-200 px-3 sm:px-4 py-2 flex items-center justify-between gap-2 shadow-xs z-10 select-none">
         {/* Left Group: Page Format & Page Count */}
@@ -186,7 +192,7 @@ export function PreviewPanel({ state }: { state: ResumeState }) {
       </div>
 
       {/* Main Scrollable Container */}
-      <div className="preview-scroll flex-1 overflow-auto p-3 sm:p-6 lg:p-8 flex flex-col items-center">
+      <div className="preview-scroll flex-1 min-h-0 w-full overflow-y-auto overflow-x-auto p-3 sm:p-6 lg:p-8 flex flex-col items-center">
         {/* Off-screen hidden measurement container */}
         <div
           ref={measureRef}
@@ -221,8 +227,9 @@ export function PreviewPanel({ state }: { state: ResumeState }) {
           style={{
             width: `${scaledWidth}px`,
             height: `${scaledHeight}px`,
+            minHeight: `${scaledHeight}px`,
           }}
-          className="preview-outer mx-auto relative transition-[width,height] duration-200 ease-out overflow-hidden print:static print:w-auto print:h-auto print:overflow-visible print:block"
+          className="preview-outer mx-auto relative shrink-0 my-auto sm:my-0 transition-[width,height] duration-200 ease-out overflow-hidden print:static print:w-auto print:h-auto print:overflow-visible print:block"
         >
           {/* Scaled Transform Container */}
           <div

@@ -51,7 +51,11 @@ export function ExportDropdown({
       setIsExporting(true);
       setIsOpen(false);
 
-      const fullName = state.contact?.fullName?.trim();
+      const basicSection = Object.values(state.sections).find(
+        (s) => s.type === "basic"
+      );
+      const fullName =
+        (basicSection?.data as { name?: string } | undefined)?.name?.trim() || "";
       const safeFileName = fullName
         ? `${fullName.replace(/[^a-zA-Z0-9_-]/g, "_")}_Resume.pdf`
         : "Resume.pdf";
