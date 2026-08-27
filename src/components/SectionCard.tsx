@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import type { DragEvent } from "react";
 import type {
   Section,
   BasicData,
@@ -23,10 +21,8 @@ import { CertificationsFields } from "@/components/fields/CertificationsFields";
 import { LanguagesFields } from "@/components/fields/LanguagesFields";
 import { CustomFields } from "@/components/fields/CustomFields";
 import {
-  GripVertical,
   ChevronUp,
   ChevronDown,
-  ChevronRight,
   Eye,
   EyeOff,
   Trash2,
@@ -40,24 +36,9 @@ import {
   FolderPlus,
 } from "lucide-react";
 
-type DragHandleProps = {
-  draggable: boolean;
-  onDragStart: (e: DragEvent) => void;
-  onDragEnd: () => void;
-};
-
-type CardDropProps = {
-  onDragOver: (e: DragEvent) => void;
-  onDragLeave: (e: DragEvent) => void;
-  onDrop: (e: DragEvent) => void;
-};
-
 export function SectionCard({
   section,
   dispatch,
-  dragHandleProps,
-  cardDropProps,
-  isDragOver,
   isFirst,
   isLast,
   onMoveUp,
@@ -65,111 +46,85 @@ export function SectionCard({
 }: {
   section: Section;
   dispatch: (action: ResumeAction) => void;
-  dragHandleProps: DragHandleProps;
-  cardDropProps: CardDropProps;
-  isDragOver: boolean;
   isFirst: boolean;
   isLast: boolean;
   onMoveUp: () => void;
   onMoveDown: () => void;
 }) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-
   function getSectionIcon(type: string) {
     switch (type) {
       case "basic":
-        return <User className="h-4 w-4 text-indigo-500" />;
+        return <User className="h-4 w-4 text-indigo-600 shrink-0" />;
       case "summary":
-        return <FileText className="h-4 w-4 text-emerald-500" />;
+        return <FileText className="h-4 w-4 text-emerald-600 shrink-0" />;
       case "experience":
-        return <Briefcase className="h-4 w-4 text-blue-500" />;
+        return <Briefcase className="h-4 w-4 text-blue-600 shrink-0" />;
       case "education":
-        return <GraduationCap className="h-4 w-4 text-amber-500" />;
+        return <GraduationCap className="h-4 w-4 text-amber-600 shrink-0" />;
       case "skills":
-        return <Wrench className="h-4 w-4 text-violet-500" />;
+        return <Wrench className="h-4 w-4 text-violet-600 shrink-0" />;
       case "certifications":
-        return <Award className="h-4 w-4 text-teal-500" />;
+        return <Award className="h-4 w-4 text-teal-600 shrink-0" />;
       case "languages":
-        return <Globe className="h-4 w-4 text-cyan-500" />;
+        return <Globe className="h-4 w-4 text-cyan-600 shrink-0" />;
       default:
-        return <FolderPlus className="h-4 w-4 text-rose-500" />;
+        return <FolderPlus className="h-4 w-4 text-rose-600 shrink-0" />;
     }
   }
 
   return (
-    <div
-      {...cardDropProps}
-      className={`group rounded-xl border bg-white shadow-xs transition-all duration-200 ${
-        isDragOver
-          ? "border-indigo-500 ring-2 ring-indigo-500/30 bg-indigo-50/20 scale-[1.01]"
-          : section.visible
-          ? "border-slate-200 hover:border-slate-300"
-          : "border-slate-200/60 bg-slate-50/60 opacity-75"
-      }`}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between gap-2 p-3">
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          {/* Drag Handle */}
-          <button
-            type="button"
-            {...dragHandleProps}
-            className="cursor-grab touch-none p-1 text-slate-300 hover:text-slate-600 active:cursor-grabbing transition-colors"
-            title="Drag to reorder section"
-          >
-            <GripVertical className="h-4 w-4" />
-          </button>
+    <div className="rounded-2xl border border-slate-200 bg-white shadow-xs transition-all duration-200">
+      {/* Section Sub-Header */}
+      <div className="flex items-center justify-between gap-3 border-b border-slate-100 p-4">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100/80">
+            {getSectionIcon(section.type)}
+          </div>
 
-          {/* Quick Move Up/Down Buttons */}
-          <div className="flex flex-col gap-0.5">
+          {section.type === "custom" ? (
+            <input
+              className="min-w-0 flex-1 truncate rounded-lg border border-slate-200 bg-slate-50/50 px-2.5 py-1 text-base font-bold text-slate-900 transition-colors hover:border-slate-300 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              value={section.title}
+              onChange={(e) =>
+                dispatch({
+                  type: "UPDATE_SECTION_TITLE",
+                  sectionId: section.id,
+                  title: e.target.value,
+                })
+              }
+              placeholder="Custom Section Title"
+            />
+          ) : (
+            <h2 className="truncate text-base font-bold text-slate-900">
+              {section.title}
+            </h2>
+          )}
+        </div>
+
+        {/* Header Action Controls */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* Quick Reorder Up/Down */}
+          <div className="flex items-center rounded-lg border border-slate-200 bg-slate-50/50 p-0.5">
             <button
               type="button"
               onClick={onMoveUp}
               disabled={isFirst}
-              className="rounded p-0.5 text-slate-300 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-20 disabled:hover:bg-transparent"
-              title="Move section up"
+              className="rounded p-1 text-slate-400 hover:bg-white hover:text-slate-700 hover:shadow-2xs disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:shadow-none transition-all"
+              title="Move tab position left/up"
             >
-              <ChevronUp className="h-3 w-3" />
+              <ChevronUp className="h-3.5 w-3.5" />
             </button>
             <button
               type="button"
               onClick={onMoveDown}
               disabled={isLast}
-              className="rounded p-0.5 text-slate-300 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-20 disabled:hover:bg-transparent"
-              title="Move section down"
+              className="rounded p-1 text-slate-400 hover:bg-white hover:text-slate-700 hover:shadow-2xs disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:shadow-none transition-all"
+              title="Move tab position right/down"
             >
-              <ChevronDown className="h-3 w-3" />
+              <ChevronDown className="h-3.5 w-3.5" />
             </button>
           </div>
 
-          {/* Section Icon & Title */}
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100">
-              {getSectionIcon(section.type)}
-            </div>
-
-            {section.type === "custom" ? (
-              <input
-                className="min-w-0 flex-1 truncate rounded-md border border-transparent bg-transparent px-1.5 py-0.5 text-sm font-bold text-slate-800 hover:border-slate-200 focus:border-indigo-400 focus:bg-white focus:outline-none"
-                value={section.title}
-                onChange={(e) =>
-                  dispatch({
-                    type: "UPDATE_SECTION_TITLE",
-                    sectionId: section.id,
-                    title: e.target.value,
-                  })
-                }
-              />
-            ) : (
-              <span className="truncate text-sm font-bold text-slate-800">
-                {section.title}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Section Actions */}
-        <div className="flex items-center gap-1">
           {/* Visibility Toggle */}
           <button
             type="button"
@@ -179,10 +134,10 @@ export function SectionCard({
                 sectionId: section.id,
               })
             }
-            className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition-colors ${
+            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
               section.visible
                 ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                : "bg-amber-50 text-amber-700 hover:bg-amber-100"
+                : "bg-amber-100/70 text-amber-800 hover:bg-amber-200/70"
             }`}
             title={section.visible ? "Hide section in preview" : "Show section in preview"}
           >
@@ -193,7 +148,7 @@ export function SectionCard({
               </>
             ) : (
               <>
-                <EyeOff className="h-3.5 w-3.5 text-amber-600" />
+                <EyeOff className="h-3.5 w-3.5 text-amber-700" />
                 <span>Hidden</span>
               </>
             )}
@@ -206,91 +161,76 @@ export function SectionCard({
               onClick={() =>
                 dispatch({ type: "REMOVE_SECTION", sectionId: section.id })
               }
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
               title="Delete custom section"
             >
               <Trash2 className="h-4 w-4" />
             </button>
           )}
-
-          {/* Accordion expand/collapse toggle */}
-          <button
-            type="button"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-            title={isCollapsed ? "Expand section" : "Collapse section"}
-          >
-            {isCollapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </button>
         </div>
       </div>
 
       {/* Card Content Body */}
-      {!isCollapsed && (
-        <div className="border-t border-slate-100 p-4">
-          {section.type === "basic" && (
-            <BasicFields
-              sectionId={section.id}
-              data={section.data as BasicData}
-              dispatch={dispatch}
-            />
-          )}
-          {section.type === "summary" && (
-            <SummaryFields
-              sectionId={section.id}
-              data={section.data as SummaryData}
-              dispatch={dispatch}
-            />
-          )}
-          {section.type === "skills" && (
-            <SkillsFields
-              sectionId={section.id}
-              data={section.data as SkillsData}
-              dispatch={dispatch}
-            />
-          )}
-          {section.type === "experience" && (
-            <ExperienceFields
-              sectionId={section.id}
-              data={section.data as ExperienceData}
-              dispatch={dispatch}
-            />
-          )}
-          {section.type === "education" && (
-            <EducationFields
-              sectionId={section.id}
-              data={section.data as EducationData}
-              dispatch={dispatch}
-            />
-          )}
-          {section.type === "certifications" && (
-            <CertificationsFields
-              sectionId={section.id}
-              data={section.data as CertificationsData}
-              dispatch={dispatch}
-            />
-          )}
-          {section.type === "languages" && (
-            <LanguagesFields
-              sectionId={section.id}
-              data={section.data as LanguagesData}
-              dispatch={dispatch}
-            />
-          )}
-          {section.type === "custom" && (
-            <CustomFields
-              sectionId={section.id}
-              data={section.data as CustomData}
-              dispatch={dispatch}
-            />
-          )}
-        </div>
-      )}
+      <div className="p-4 sm:p-5">
+        {section.type === "basic" && (
+          <BasicFields
+            sectionId={section.id}
+            data={section.data as BasicData}
+            dispatch={dispatch}
+          />
+        )}
+        {section.type === "summary" && (
+          <SummaryFields
+            sectionId={section.id}
+            data={section.data as SummaryData}
+            dispatch={dispatch}
+          />
+        )}
+        {section.type === "skills" && (
+          <SkillsFields
+            sectionId={section.id}
+            data={section.data as SkillsData}
+            dispatch={dispatch}
+          />
+        )}
+        {section.type === "experience" && (
+          <ExperienceFields
+            sectionId={section.id}
+            data={section.data as ExperienceData}
+            dispatch={dispatch}
+          />
+        )}
+        {section.type === "education" && (
+          <EducationFields
+            sectionId={section.id}
+            data={section.data as EducationData}
+            dispatch={dispatch}
+          />
+        )}
+        {section.type === "certifications" && (
+          <CertificationsFields
+            sectionId={section.id}
+            data={section.data as CertificationsData}
+            dispatch={dispatch}
+          />
+        )}
+        {section.type === "languages" && (
+          <LanguagesFields
+            sectionId={section.id}
+            data={section.data as LanguagesData}
+            dispatch={dispatch}
+          />
+        )}
+        {section.type === "custom" && (
+          <CustomFields
+            sectionId={section.id}
+            data={section.data as CustomData}
+            dispatch={dispatch}
+          />
+        )}
+      </div>
     </div>
   );
 }
+
 

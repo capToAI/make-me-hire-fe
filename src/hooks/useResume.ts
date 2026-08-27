@@ -21,6 +21,19 @@ export function useResume() {
       if (raw) {
         const parsed = JSON.parse(raw) as ResumeState;
         
+        // Auto-migrate section titles if they use older default names
+        Object.values(parsed.sections || {}).forEach((sec) => {
+          if (sec.type === "summary" && sec.title === "Professional Summary") {
+            sec.title = "Summary";
+          }
+          if (sec.type === "experience" && sec.title === "Professional Experience") {
+            sec.title = "Experience";
+          }
+          if (sec.type === "basic" && sec.title === "Basic") {
+            sec.title = "Personal Info";
+          }
+        });
+
         // Auto-migrate cached states to include new Certifications & Languages sections if missing
         const existingTypes = new Set(
           Object.values(parsed.sections || {}).map((s) => s.type)

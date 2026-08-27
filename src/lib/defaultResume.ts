@@ -23,7 +23,7 @@ export function createDefaultResume(): ResumeState {
   const basic: Section = {
     id: basicId,
     type: "basic",
-    title: "Basic",
+    title: "Personal Info",
     visible: true,
     data: {
       name: "",
@@ -39,7 +39,7 @@ export function createDefaultResume(): ResumeState {
   const summary: Section = {
     id: summaryId,
     type: "summary",
-    title: "Professional Summary",
+    title: "Summary",
     visible: true,
     data: { text: "" } satisfies SummaryData,
   };
@@ -55,7 +55,7 @@ export function createDefaultResume(): ResumeState {
   const experience: Section = {
     id: experienceId,
     type: "experience",
-    title: "Professional Experience",
+    title: "Experience",
     visible: true,
     data: {
       entries: [
