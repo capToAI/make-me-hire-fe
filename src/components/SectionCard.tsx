@@ -1,40 +1,52 @@
 "use client";
 
-import type {
-  Section,
-  BasicData,
-  SummaryData,
-  SkillsData,
-  ExperienceData,
-  EducationData,
-  CertificationsData,
-  LanguagesData,
-  CustomData,
-} from "@/lib/types";
-import type { ResumeAction } from "@/lib/resumeReducer";
-import { BasicFields } from "@/components/fields/BasicFields";
-import { SummaryFields } from "@/components/fields/SummaryFields";
-import { SkillsFields } from "@/components/fields/SkillsFields";
-import { ExperienceFields } from "@/components/fields/ExperienceFields";
-import { EducationFields } from "@/components/fields/EducationFields";
-import { CertificationsFields } from "@/components/fields/CertificationsFields";
-import { LanguagesFields } from "@/components/fields/LanguagesFields";
-import { CustomFields } from "@/components/fields/CustomFields";
+import type { ChangeEvent } from "react";
+
 import {
-  ChevronUp,
+  Award,
+  Briefcase,
   ChevronDown,
+  ChevronUp,
   Eye,
   EyeOff,
+  FileText,
+  FolderPlus,
+  Globe,
+  GraduationCap,
   Trash2,
   User,
-  FileText,
-  Briefcase,
-  GraduationCap,
   Wrench,
-  Award,
-  Globe,
-  FolderPlus,
 } from "lucide-react";
+
+import { BasicFields } from "@/components/fields/BasicFields";
+import { CertificationsFields } from "@/components/fields/CertificationsFields";
+import { CustomFields } from "@/components/fields/CustomFields";
+import { EducationFields } from "@/components/fields/EducationFields";
+import { ExperienceFields } from "@/components/fields/ExperienceFields";
+import { LanguagesFields } from "@/components/fields/LanguagesFields";
+import { SkillsFields } from "@/components/fields/SkillsFields";
+import { SummaryFields } from "@/components/fields/SummaryFields";
+import type { ResumeAction } from "@/lib/resumeReducer";
+import type {
+  BasicData,
+  CertificationsData,
+  CustomData,
+  EducationData,
+  ExperienceData,
+  LanguagesData,
+  Section,
+  SkillsData,
+  SummaryData,
+} from "@/lib/types";
+
+interface SectionCardProps {
+  section: Section;
+  dispatch: (action: ResumeAction) => void;
+  isFirst: boolean;
+  isLast: boolean;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+}
 
 export function SectionCard({
   section,
@@ -43,15 +55,9 @@ export function SectionCard({
   isLast,
   onMoveUp,
   onMoveDown,
-}: {
-  section: Section;
-  dispatch: (action: ResumeAction) => void;
-  isFirst: boolean;
-  isLast: boolean;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
-}) {
-  function getSectionIcon(type: string) {
+}: SectionCardProps) {
+  // Helpers
+  const getSectionIcon = (type: string) => {
     switch (type) {
       case "basic":
         return <User className="h-4 w-4 text-indigo-600 shrink-0" />;
@@ -70,7 +76,27 @@ export function SectionCard({
       default:
         return <FolderPlus className="h-4 w-4 text-rose-600 shrink-0" />;
     }
-  }
+  };
+
+  // Event Handlers
+  const onChangeTitle = (e: ChangeEvent<HTMLInputElement>) => {
+    dispatch({
+      type: "UPDATE_SECTION_TITLE",
+      sectionId: section.id,
+      title: e.target.value,
+    });
+  };
+
+  const onClickToggleVisibility = () => {
+    dispatch({
+      type: "TOGGLE_SECTION_VISIBILITY",
+      sectionId: section.id,
+    });
+  };
+
+  const onClickRemoveSection = () => {
+    dispatch({ type: "REMOVE_SECTION", sectionId: section.id });
+  };
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white shadow-xs transition-all duration-200">
@@ -85,13 +111,7 @@ export function SectionCard({
             <input
               className="min-w-0 flex-1 truncate rounded-lg border border-slate-200 bg-slate-50/50 px-2.5 py-1 text-base font-bold text-slate-900 transition-colors hover:border-slate-300 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
               value={section.title}
-              onChange={(e) =>
-                dispatch({
-                  type: "UPDATE_SECTION_TITLE",
-                  sectionId: section.id,
-                  title: e.target.value,
-                })
-              }
+              onChange={onChangeTitle}
               placeholder="Custom Section Title"
             />
           ) : (
@@ -109,7 +129,7 @@ export function SectionCard({
               type="button"
               onClick={onMoveUp}
               disabled={isFirst}
-              className="rounded p-1 text-slate-400 hover:bg-white hover:text-slate-700 hover:shadow-2xs disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:shadow-none transition-all"
+              className="rounded p-1 text-slate-400 hover:bg-white hover:text-slate-700 hover:shadow-2xs disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:shadow-none transition-all cursor-pointer"
               title="Move tab position left/up"
             >
               <ChevronUp className="h-3.5 w-3.5" />
@@ -118,7 +138,7 @@ export function SectionCard({
               type="button"
               onClick={onMoveDown}
               disabled={isLast}
-              className="rounded p-1 text-slate-400 hover:bg-white hover:text-slate-700 hover:shadow-2xs disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:shadow-none transition-all"
+              className="rounded p-1 text-slate-400 hover:bg-white hover:text-slate-700 hover:shadow-2xs disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:shadow-none transition-all cursor-pointer"
               title="Move tab position right/down"
             >
               <ChevronDown className="h-3.5 w-3.5" />
@@ -128,12 +148,7 @@ export function SectionCard({
           {/* Visibility Toggle */}
           <button
             type="button"
-            onClick={() =>
-              dispatch({
-                type: "TOGGLE_SECTION_VISIBILITY",
-                sectionId: section.id,
-              })
-            }
+            onClick={onClickToggleVisibility}
             className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
               section.visible
                 ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
@@ -158,9 +173,7 @@ export function SectionCard({
           {section.type === "custom" && (
             <button
               type="button"
-              onClick={() =>
-                dispatch({ type: "REMOVE_SECTION", sectionId: section.id })
-              }
+              onClick={onClickRemoveSection}
               className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
               title="Delete custom section"
             >
@@ -232,5 +245,6 @@ export function SectionCard({
     </div>
   );
 }
+
 
 

@@ -1,40 +1,49 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import type { ResumeState } from "@/lib/types";
-import type { ResumeAction } from "@/lib/resumeReducer";
-import { useDragReorder } from "@/hooks/useDragReorder";
-import { SectionCard } from "@/components/SectionCard";
+import { useEffect, useRef, useState } from "react";
+
 import {
-  Sparkles,
-  Printer,
-  PlusCircle,
-  GripVertical,
   ChevronLeft,
   ChevronRight,
   EyeOff,
+  GripVertical,
+  PlusCircle,
+  Printer,
+  Sparkles,
 } from "lucide-react";
 
-export function FormPanel({
-  state,
-  dispatch,
-}: {
+import { SectionCard } from "@/components/SectionCard";
+import { useDragReorder } from "@/hooks/useDragReorder";
+import type { ResumeAction } from "@/lib/resumeReducer";
+import type { ResumeState } from "@/lib/types";
+
+interface FormPanelProps {
   state: ResumeState;
   dispatch: (action: ResumeAction) => void;
-}) {
+}
+
+export function FormPanel({ state, dispatch }: FormPanelProps) {
+  // 1. Refs
+  const prevOrderLengthRef = useRef(state.sectionOrder.length);
+
+  // 2. State
   const [activeSectionId, setActiveSectionId] = useState<string | null>(
     state.sectionOrder[0] || null
   );
 
-  const prevOrderLengthRef = useRef(state.sectionOrder.length);
-
-  // Reorder hook for section tabs
+  // 3. Custom Hooks
   const { getHandleProps, getCardProps, overIndex } = useDragReorder(
     (fromIndex, toIndex) =>
       dispatch({ type: "REORDER_SECTIONS", fromIndex, toIndex })
   );
 
-  // Ensure activeSectionId is always valid
+  // 4. Derived Values
+  const activeIndex = activeSectionId
+    ? state.sectionOrder.indexOf(activeSectionId)
+    : 0;
+  const activeSection = activeSectionId ? state.sections[activeSectionId] : null;
+
+  // 5. Effects
   useEffect(() => {
     // If a new section was added, automatically select it
     if (state.sectionOrder.length > prevOrderLengthRef.current) {
@@ -45,7 +54,7 @@ export function FormPanel({
     }
     prevOrderLengthRef.current = state.sectionOrder.length;
 
-    // If current active section no longer exists (e.g. deleted), fallback to first section
+    // Fallback if current active section was removed
     if (activeSectionId && !state.sections[activeSectionId]) {
       setActiveSectionId(state.sectionOrder[0] || null);
     } else if (!activeSectionId && state.sectionOrder.length > 0) {
@@ -53,31 +62,26 @@ export function FormPanel({
     }
   }, [state.sectionOrder, state.sections, activeSectionId]);
 
-  const activeIndex = activeSectionId
-    ? state.sectionOrder.indexOf(activeSectionId)
-    : 0;
-
-  const activeSection = activeSectionId ? state.sections[activeSectionId] : null;
-
-  const handleMoveUp = (index: number) => {
+  // 6. Event Handlers
+  const onClickMoveUp = (index: number) => {
     if (index > 0) {
       dispatch({ type: "REORDER_SECTIONS", fromIndex: index, toIndex: index - 1 });
     }
   };
 
-  const handleMoveDown = (index: number) => {
+  const onClickMoveDown = (index: number) => {
     if (index < state.sectionOrder.length - 1) {
       dispatch({ type: "REORDER_SECTIONS", fromIndex: index, toIndex: index + 1 });
     }
   };
 
-  const handleBack = () => {
+  const onClickBack = () => {
     if (activeIndex > 0) {
       setActiveSectionId(state.sectionOrder[activeIndex - 1]);
     }
   };
 
-  const handleNext = () => {
+  const onClickNext = () => {
     if (activeIndex < state.sectionOrder.length - 1) {
       setActiveSectionId(state.sectionOrder[activeIndex + 1]);
     } else {
@@ -85,6 +89,15 @@ export function FormPanel({
     }
   };
 
+  const onClickAddCustomSection = () => {
+    dispatch({ type: "ADD_CUSTOM_SECTION" });
+  };
+
+  const onClickPrint = () => {
+    window.print();
+  };
+
+  // 7. Render
   return (
     <div className="no-print flex w-full flex-col bg-slate-50 lg:h-full lg:w-[480px] xl:w-[520px] lg:flex-shrink-0 lg:border-r lg:border-slate-200">
       {/* Top Bar Header */}
@@ -105,7 +118,7 @@ export function FormPanel({
 
         <button
           type="button"
-          onClick={() => window.print()}
+          onClick={onClickPrint}
           className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs transition-all hover:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 cursor-pointer"
         >
           <Printer className="h-4 w-4" />
@@ -188,7 +201,7 @@ export function FormPanel({
           {/* Add Custom Section Tab Button */}
           <button
             type="button"
-            onClick={() => dispatch({ type: "ADD_CUSTOM_SECTION" })}
+            onClick={onClickAddCustomSection}
             className="group flex items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-2 text-xs font-bold text-slate-600 transition-all hover:border-indigo-400 hover:bg-indigo-50/30 hover:text-indigo-600 active:scale-[0.98] cursor-pointer"
             title="Add a new custom section tab"
           >
@@ -206,8 +219,8 @@ export function FormPanel({
             dispatch={dispatch}
             isFirst={activeIndex === 0}
             isLast={activeIndex === state.sectionOrder.length - 1}
-            onMoveUp={() => handleMoveUp(activeIndex)}
-            onMoveDown={() => handleMoveDown(activeIndex)}
+            onMoveUp={() => onClickMoveUp(activeIndex)}
+            onMoveDown={() => onClickMoveDown(activeIndex)}
           />
         ) : (
           <div className="flex h-40 items-center justify-center rounded-xl border border-dashed border-slate-200 text-slate-400 text-sm">
@@ -220,7 +233,7 @@ export function FormPanel({
       <div className="sticky bottom-0 z-10 flex items-center justify-between border-t border-slate-200 bg-white px-5 py-3 shadow-md">
         <button
           type="button"
-          onClick={handleBack}
+          onClick={onClickBack}
           disabled={activeIndex === 0}
           className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-2xs transition-all hover:bg-slate-50 active:bg-slate-100 disabled:opacity-40 disabled:hover:bg-white cursor-pointer"
         >
@@ -234,7 +247,7 @@ export function FormPanel({
 
         <button
           type="button"
-          onClick={handleNext}
+          onClick={onClickNext}
           className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow-2xs transition-all hover:bg-slate-800 active:bg-slate-950 cursor-pointer"
         >
           <span>{activeIndex === state.sectionOrder.length - 1 ? "Print / Export" : "Next"}</span>
@@ -244,5 +257,6 @@ export function FormPanel({
     </div>
   );
 }
+
 
 
