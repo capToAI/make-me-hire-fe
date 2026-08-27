@@ -6,9 +6,13 @@ import type {
   SectionType,
   ExperienceData,
   EducationData,
+  CertificationsData,
+  LanguagesData,
   CustomData,
   ExperienceEntry,
   EducationEntry,
+  CertificationEntry,
+  LanguageEntry,
   CustomEntry,
 } from "./types";
 
@@ -57,7 +61,9 @@ function reorder<T>(list: T[], fromIndex: number, toIndex: number): T[] {
   return copy;
 }
 
-function makeEmptyEntry(type: SectionType): ExperienceEntry | EducationEntry | CustomEntry {
+function makeEmptyEntry(
+  type: SectionType
+): ExperienceEntry | EducationEntry | CertificationEntry | LanguageEntry | CustomEntry {
   if (type === "experience") {
     return {
       id: makeId("entry"),
@@ -78,6 +84,22 @@ function makeEmptyEntry(type: SectionType): ExperienceEntry | EducationEntry | C
       end: "",
     };
   }
+  if (type === "certifications") {
+    return {
+      id: makeId("entry"),
+      name: "",
+      issuer: "",
+      date: "",
+      url: "",
+    };
+  }
+  if (type === "languages") {
+    return {
+      id: makeId("entry"),
+      language: "",
+      proficiency: "",
+    };
+  }
   return {
     id: makeId("entry"),
     heading: "",
@@ -90,12 +112,17 @@ function makeEmptyEntry(type: SectionType): ExperienceEntry | EducationEntry | C
 
 function hasEntries(
   data: SectionData
-): data is ExperienceData | EducationData | CustomData {
+): data is
+  | ExperienceData
+  | EducationData
+  | CertificationsData
+  | LanguagesData
+  | CustomData {
   return Array.isArray((data as { entries?: unknown }).entries);
 }
 
 function hasBullets(
-  entry: ExperienceEntry | EducationEntry | CustomEntry
+  entry: ExperienceEntry | EducationEntry | CertificationEntry | LanguageEntry | CustomEntry
 ): entry is ExperienceEntry | CustomEntry {
   return Array.isArray((entry as { bullets?: unknown }).bullets);
 }
@@ -216,7 +243,7 @@ export function resumeReducer(
       const section = state.sections[action.sectionId];
       if (!section || !hasEntries(section.data)) return state;
       const entries = section.data.entries as Array<
-        ExperienceEntry | EducationEntry | CustomEntry
+        ExperienceEntry | EducationEntry | CertificationEntry | LanguageEntry | CustomEntry
       >;
       const data = {
         entries: reorder(entries, action.fromIndex, action.toIndex),

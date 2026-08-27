@@ -1,6 +1,7 @@
 import type { SummaryData } from "@/lib/types";
 import type { ResumeAction } from "@/lib/resumeReducer";
 import { labelClass } from "@/lib/ui";
+import { FileText } from "lucide-react";
 
 export function SummaryFields({
   sectionId,
@@ -13,9 +14,12 @@ export function SummaryFields({
 }) {
   return (
     <div>
-      <label className={labelClass}>Summary</label>
+      <label className={labelClass}>
+        <FileText className="h-3.5 w-3.5 text-slate-400" />
+        Professional Summary
+      </label>
       <textarea
-        className="w-full rounded border border-zinc-300 px-2 py-1.5 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none"
+        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder-slate-400 transition-all focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
         rows={4}
         value={data.text}
         onChange={(e) =>
@@ -25,8 +29,9 @@ export function SummaryFields({
             data: { text: e.target.value },
           })
         }
-        placeholder="A short paragraph summarizing your experience and strengths…"
+        placeholder="A short, impactful paragraph highlighting your core background, strengths, and career objectives…"
       />
     </div>
   );
 }
+

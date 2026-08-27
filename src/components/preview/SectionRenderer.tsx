@@ -5,6 +5,8 @@ import type {
   SkillsData,
   ExperienceData,
   EducationData,
+  CertificationsData,
+  LanguagesData,
   CustomData,
 } from "@/lib/types";
 import { BasicPreview } from "./BasicPreview";
@@ -12,6 +14,8 @@ import { SummaryPreview } from "./SummaryPreview";
 import { SkillsPreview } from "./SkillsPreview";
 import { ExperiencePreview } from "./ExperiencePreview";
 import { EducationPreview } from "./EducationPreview";
+import { CertificationsPreview } from "./CertificationsPreview";
+import { LanguagesPreview } from "./LanguagesPreview";
 import { CustomPreview } from "./CustomPreview";
 
 export function SectionRenderer({ section }: { section: Section }) {
@@ -38,6 +42,20 @@ export function SectionRenderer({ section }: { section: Section }) {
         <EducationPreview
           title={section.title}
           data={section.data as EducationData}
+        />
+      );
+    case "certifications":
+      return (
+        <CertificationsPreview
+          title={section.title}
+          data={section.data as CertificationsData}
+        />
+      );
+    case "languages":
+      return (
+        <LanguagesPreview
+          title={section.title}
+          data={section.data as LanguagesData}
         />
       );
     case "custom":

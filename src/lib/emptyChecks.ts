@@ -5,9 +5,13 @@ import type {
   SkillsData,
   ExperienceData,
   EducationData,
+  CertificationsData,
+  LanguagesData,
   CustomData,
   ExperienceEntry,
   EducationEntry,
+  CertificationEntry,
+  LanguageEntry,
   CustomEntry,
 } from "./types";
 
@@ -30,6 +34,19 @@ export function isEducationEntryEmpty(entry: EducationEntry): boolean {
     blank(entry.start) &&
     blank(entry.end)
   );
+}
+
+export function isCertificationEntryEmpty(entry: CertificationEntry): boolean {
+  return (
+    blank(entry.name) &&
+    blank(entry.issuer) &&
+    blank(entry.date) &&
+    blank(entry.url)
+  );
+}
+
+export function isLanguageEntryEmpty(entry: LanguageEntry): boolean {
+  return blank(entry.language) && blank(entry.proficiency);
 }
 
 export function isCustomEntryEmpty(entry: CustomEntry): boolean {
@@ -67,6 +84,14 @@ export function sectionHasContent(section: Section): boolean {
     case "education":
       return (section.data as EducationData).entries.some(
         (e) => !isEducationEntryEmpty(e)
+      );
+    case "certifications":
+      return (section.data as CertificationsData).entries.some(
+        (e) => !isCertificationEntryEmpty(e)
+      );
+    case "languages":
+      return (section.data as LanguagesData).entries.some(
+        (e) => !isLanguageEntryEmpty(e)
       );
     case "custom":
       return (section.data as CustomData).entries.some(

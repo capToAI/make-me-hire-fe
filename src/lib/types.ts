@@ -4,6 +4,8 @@ export type SectionType =
   | "skills"
   | "experience"
   | "education"
+  | "certifications"
+  | "languages"
   | "custom";
 
 export interface BasicData {
@@ -51,6 +53,28 @@ export interface EducationData {
   entries: EducationEntry[];
 }
 
+export interface CertificationEntry {
+  id: string;
+  name: string;
+  issuer: string;
+  date: string;
+  url: string;
+}
+
+export interface CertificationsData {
+  entries: CertificationEntry[];
+}
+
+export interface LanguageEntry {
+  id: string;
+  language: string;
+  proficiency: string;
+}
+
+export interface LanguagesData {
+  entries: LanguageEntry[];
+}
+
 export interface CustomEntry {
   id: string;
   heading: string;
@@ -70,6 +94,8 @@ export type SectionData =
   | SkillsData
   | ExperienceData
   | EducationData
+  | CertificationsData
+  | LanguagesData
   | CustomData;
 
 export interface Section {

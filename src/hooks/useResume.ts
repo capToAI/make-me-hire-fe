@@ -20,6 +20,33 @@ export function useResume() {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as ResumeState;
+        
+        // Auto-migrate cached states to include new Certifications & Languages sections if missing
+        const existingTypes = new Set(
+          Object.values(parsed.sections || {}).map((s) => s.type)
+        );
+        const defaultState = createDefaultResume();
+
+        if (!existingTypes.has("certifications")) {
+          const certSec = Object.values(defaultState.sections).find(
+            (s) => s.type === "certifications"
+          );
+          if (certSec) {
+            parsed.sections[certSec.id] = certSec;
+            parsed.sectionOrder.push(certSec.id);
+          }
+        }
+
+        if (!existingTypes.has("languages")) {
+          const langSec = Object.values(defaultState.sections).find(
+            (s) => s.type === "languages"
+          );
+          if (langSec) {
+            parsed.sections[langSec.id] = langSec;
+            parsed.sectionOrder.push(langSec.id);
+          }
+        }
+
         dispatch({ type: "LOAD", state: parsed });
       }
     } catch {

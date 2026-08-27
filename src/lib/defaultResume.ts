@@ -7,6 +7,8 @@ import type {
   SkillsData,
   ExperienceData,
   EducationData,
+  CertificationsData,
+  LanguagesData,
 } from "./types";
 
 export function createDefaultResume(): ResumeState {
@@ -15,6 +17,8 @@ export function createDefaultResume(): ResumeState {
   const skillsId = makeId("section");
   const experienceId = makeId("section");
   const educationId = makeId("section");
+  const certificationsId = makeId("section");
+  const languagesId = makeId("section");
 
   const basic: Section = {
     id: basicId,
@@ -86,14 +90,58 @@ export function createDefaultResume(): ResumeState {
     } satisfies EducationData,
   };
 
+  const certifications: Section = {
+    id: certificationsId,
+    type: "certifications",
+    title: "Certifications",
+    visible: true,
+    data: {
+      entries: [
+        {
+          id: makeId("entry"),
+          name: "",
+          issuer: "",
+          date: "",
+          url: "",
+        },
+      ],
+    } satisfies CertificationsData,
+  };
+
+  const languages: Section = {
+    id: languagesId,
+    type: "languages",
+    title: "Languages",
+    visible: true,
+    data: {
+      entries: [
+        {
+          id: makeId("entry"),
+          language: "",
+          proficiency: "",
+        },
+      ],
+    } satisfies LanguagesData,
+  };
+
   return {
-    sectionOrder: [basicId, summaryId, skillsId, experienceId, educationId],
+    sectionOrder: [
+      basicId,
+      summaryId,
+      skillsId,
+      experienceId,
+      educationId,
+      certificationsId,
+      languagesId,
+    ],
     sections: {
       [basicId]: basic,
       [summaryId]: summary,
       [skillsId]: skills,
       [experienceId]: experience,
       [educationId]: education,
+      [certificationsId]: certifications,
+      [languagesId]: languages,
     },
   };
 }
