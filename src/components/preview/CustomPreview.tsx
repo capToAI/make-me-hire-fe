@@ -2,6 +2,7 @@ import type { CustomData } from "@/lib/types";
 import { SectionHeading } from "./SectionHeading";
 import { formatDateRange } from "@/lib/formatDateRange";
 import { isCustomEntryEmpty } from "@/lib/emptyChecks";
+import { renderFormattedText } from "@/lib/renderFormattedText";
 
 export function CustomPreview({
   title,
@@ -22,11 +23,11 @@ export function CustomPreview({
             <div key={entry.id}>
               <div className="flex items-baseline justify-between gap-2">
                 <p className="text-[12px] font-bold text-black">
-                  {entry.heading}
+                  {renderFormattedText(entry.heading)}
                   {entry.subheading && (
                     <span className="font-normal italic">
                       {" "}
-                      — {entry.subheading}
+                      — {renderFormattedText(entry.subheading)}
                     </span>
                   )}
                 </p>
@@ -39,7 +40,7 @@ export function CustomPreview({
               {bullets.length > 0 && (
                 <ul className="mt-0.5 list-disc space-y-0.5 pl-4 text-[11.5px] leading-snug text-black">
                   {bullets.map((bullet, i) => (
-                    <li key={i}>{bullet}</li>
+                    <li key={i}>{renderFormattedText(bullet)}</li>
                   ))}
                 </ul>
               )}

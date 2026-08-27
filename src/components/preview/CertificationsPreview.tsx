@@ -1,6 +1,7 @@
 import type { CertificationsData } from "@/lib/types";
 import { SectionHeading } from "./SectionHeading";
 import { isCertificationEntryEmpty } from "@/lib/emptyChecks";
+import { renderFormattedText } from "@/lib/renderFormattedText";
 
 export function CertificationsPreview({
   title,
@@ -21,9 +22,12 @@ export function CertificationsPreview({
           >
             <div className="min-w-0">
               <p className="text-[12px] font-bold text-black">
-                {entry.name}
+                {renderFormattedText(entry.name)}
                 {entry.issuer && (
-                  <span className="font-normal italic"> — {entry.issuer}</span>
+                  <span className="font-normal italic">
+                    {" "}
+                    — {renderFormattedText(entry.issuer)}
+                  </span>
                 )}
                 {entry.url && (
                   <a
@@ -39,7 +43,7 @@ export function CertificationsPreview({
             </div>
             {entry.date && (
               <p className="whitespace-nowrap text-[11px] text-black">
-                {entry.date}
+                {renderFormattedText(entry.date)}
               </p>
             )}
           </div>

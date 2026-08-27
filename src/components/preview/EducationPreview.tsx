@@ -2,6 +2,7 @@ import type { EducationData } from "@/lib/types";
 import { SectionHeading } from "./SectionHeading";
 import { formatDateRange } from "@/lib/formatDateRange";
 import { isEducationEntryEmpty } from "@/lib/emptyChecks";
+import { renderFormattedText } from "@/lib/renderFormattedText";
 
 export function EducationPreview({
   title,
@@ -23,9 +24,12 @@ export function EducationPreview({
               className="flex items-baseline justify-between gap-2"
             >
               <p className="text-[12px] font-bold text-black">
-                {entry.degree}
+                {renderFormattedText(entry.degree)}
                 {entry.field && (
-                  <span className="font-normal italic"> — {entry.field}</span>
+                  <span className="font-normal italic">
+                    {" "}
+                    — {renderFormattedText(entry.field)}
+                  </span>
                 )}
               </p>
               {dateRange && (

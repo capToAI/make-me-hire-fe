@@ -1,5 +1,7 @@
+import React from "react";
 import type { SkillsData } from "@/lib/types";
 import { SectionHeading } from "./SectionHeading";
+import { renderFormattedText } from "@/lib/renderFormattedText";
 
 export function SkillsPreview({
   title,
@@ -14,9 +16,16 @@ export function SkillsPreview({
       <SectionHeading title={title} />
       <p className="text-[11.5px] leading-snug text-black">
         {data.categoryLabel && (
-          <span className="font-semibold">{data.categoryLabel} </span>
+          <span className="font-semibold">
+            {renderFormattedText(data.categoryLabel)}{" "}
+          </span>
         )}
-        {items.join(", ")}
+        {items.map((item, index) => (
+          <React.Fragment key={index}>
+            {index > 0 && ", "}
+            {renderFormattedText(item)}
+          </React.Fragment>
+        ))}
       </p>
     </div>
   );

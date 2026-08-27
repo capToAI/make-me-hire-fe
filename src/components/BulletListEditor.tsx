@@ -28,9 +28,14 @@ export function BulletListEditor({
 
   return (
     <div className="space-y-2">
-      <label className="mb-1 block text-xs font-semibold text-slate-600">
-        Bullet points
-      </label>
+      <div className="mb-1 flex items-center justify-between">
+        <label className="block text-xs font-semibold text-slate-600">
+          Bullet points
+        </label>
+        <span className="text-[10px] font-medium text-slate-400">
+          Tip: Use <code className="rounded bg-slate-100 px-1 py-0.5 text-slate-600">**text**</code> for bold
+        </span>
+      </div>
       {bullets.map((bullet, index) => (
         <div
           key={index}

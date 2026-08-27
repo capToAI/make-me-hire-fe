@@ -2,6 +2,7 @@ import type { ExperienceData } from "@/lib/types";
 import { SectionHeading } from "./SectionHeading";
 import { formatDateRange } from "@/lib/formatDateRange";
 import { isExperienceEntryEmpty } from "@/lib/emptyChecks";
+import { renderFormattedText } from "@/lib/renderFormattedText";
 
 export function ExperiencePreview({
   title,
@@ -26,9 +27,12 @@ export function ExperiencePreview({
             <div key={entry.id}>
               <div className="flex items-baseline justify-between gap-2">
                 <p className="text-[12px] font-bold text-black">
-                  {entry.company}
+                  {renderFormattedText(entry.company)}
                   {entry.role && (
-                    <span className="font-normal italic"> — {entry.role}</span>
+                    <span className="font-normal italic">
+                      {" "}
+                      — {renderFormattedText(entry.role)}
+                    </span>
                   )}
                 </p>
                 {dateRange && (
@@ -40,7 +44,7 @@ export function ExperiencePreview({
               {bullets.length > 0 && (
                 <ul className="mt-0.5 list-disc space-y-0.5 pl-4 text-[11.5px] leading-snug text-black">
                   {bullets.map((bullet, i) => (
-                    <li key={i}>{bullet}</li>
+                    <li key={i}>{renderFormattedText(bullet)}</li>
                   ))}
                 </ul>
               )}

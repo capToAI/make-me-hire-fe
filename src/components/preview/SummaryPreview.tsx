@@ -1,5 +1,6 @@
 import type { SummaryData } from "@/lib/types";
 import { SectionHeading } from "./SectionHeading";
+import { renderFormattedText } from "@/lib/renderFormattedText";
 
 export function SummaryPreview({
   title,
@@ -12,7 +13,7 @@ export function SummaryPreview({
     <div>
       <SectionHeading title={title} />
       <p className="whitespace-pre-line text-[11.5px] leading-snug text-black">
-        {data.text}
+        {renderFormattedText(data.text)}
       </p>
     </div>
   );
