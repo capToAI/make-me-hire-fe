@@ -42,6 +42,8 @@ body {
     color: #000000 !important;
     margin: 0 !important;
     padding: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
   .no-print {
@@ -53,19 +55,29 @@ body {
     background: #ffffff !important;
     padding: 0 !important;
     margin: 0 !important;
+    display: block !important;
+    height: auto !important;
   }
 
   .preview-outer {
     height: auto !important;
+    width: auto !important;
     margin: 0 !important;
     padding: 0 !important;
+    overflow: visible !important;
+    position: static !important;
+    display: block !important;
   }
 
   .preview-scale {
     transform: none !important;
+    position: static !important;
+    width: auto !important;
+    display: block !important;
   }
 
   .resume-page {
+    border: none !important;
     box-shadow: none !important;
     margin: 0 !important;
     page-break-after: always;

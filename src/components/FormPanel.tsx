@@ -28,20 +28,22 @@ export function FormPanel({ state, dispatch }: FormPanelProps) {
 
   // 2. State
   const [activeSectionId, setActiveSectionId] = useState<string | null>(
-    state.sectionOrder[0] || null
+    state.sectionOrder[0] || null,
   );
 
   // 3. Custom Hooks
   const { getHandleProps, getCardProps, overIndex } = useDragReorder(
     (fromIndex, toIndex) =>
-      dispatch({ type: "REORDER_SECTIONS", fromIndex, toIndex })
+      dispatch({ type: "REORDER_SECTIONS", fromIndex, toIndex }),
   );
 
   // 4. Derived Values
   const activeIndex = activeSectionId
     ? state.sectionOrder.indexOf(activeSectionId)
     : 0;
-  const activeSection = activeSectionId ? state.sections[activeSectionId] : null;
+  const activeSection = activeSectionId
+    ? state.sections[activeSectionId]
+    : null;
 
   // 5. Effects
   useEffect(() => {
@@ -65,13 +67,21 @@ export function FormPanel({ state, dispatch }: FormPanelProps) {
   // 6. Event Handlers
   const onClickMoveUp = (index: number) => {
     if (index > 0) {
-      dispatch({ type: "REORDER_SECTIONS", fromIndex: index, toIndex: index - 1 });
+      dispatch({
+        type: "REORDER_SECTIONS",
+        fromIndex: index,
+        toIndex: index - 1,
+      });
     }
   };
 
   const onClickMoveDown = (index: number) => {
     if (index < state.sectionOrder.length - 1) {
-      dispatch({ type: "REORDER_SECTIONS", fromIndex: index, toIndex: index + 1 });
+      dispatch({
+        type: "REORDER_SECTIONS",
+        fromIndex: index,
+        toIndex: index + 1,
+      });
     }
   };
 
@@ -108,7 +118,7 @@ export function FormPanel({ state, dispatch }: FormPanelProps) {
           </div>
           <div>
             <h1 className="text-base font-bold tracking-tight text-slate-900 leading-none">
-              Make My Resume
+              MakeMeHire
             </h1>
             <p className="mt-0.5 text-xs text-slate-500 font-medium">
               Live Resume Editor
@@ -154,8 +164,8 @@ export function FormPanel({ state, dispatch }: FormPanelProps) {
                   isDragOver
                     ? "border-indigo-500 bg-indigo-100/60 ring-2 ring-indigo-500/40 scale-[1.02] z-10"
                     : isActive
-                    ? "border-purple-300 bg-purple-50/60 text-purple-950 shadow-xs ring-2 ring-purple-500/20 font-bold"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 font-semibold"
+                      ? "border-purple-300 bg-purple-50/60 text-purple-950 shadow-xs ring-2 ring-purple-500/20 font-bold"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 font-semibold"
                 }`}
               >
                 {/* Drag handle inside tab header */}
@@ -250,13 +260,14 @@ export function FormPanel({ state, dispatch }: FormPanelProps) {
           onClick={onClickNext}
           className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow-2xs transition-all hover:bg-slate-800 active:bg-slate-950 cursor-pointer"
         >
-          <span>{activeIndex === state.sectionOrder.length - 1 ? "Print / Export" : "Next"}</span>
+          <span>
+            {activeIndex === state.sectionOrder.length - 1
+              ? "Print / Export"
+              : "Next"}
+          </span>
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
     </div>
   );
 }
-
-
-
