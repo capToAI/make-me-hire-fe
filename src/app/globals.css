@@ -26,8 +26,13 @@ body {
 }
 
 @media print {
-  @page {
+  @page letter-page {
     size: letter;
+    margin: 0;
+  }
+
+  @page a4-page {
+    size: A4;
     margin: 0;
   }
 
@@ -35,6 +40,8 @@ body {
   body {
     background: #ffffff !important;
     color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   .no-print {
@@ -45,20 +52,39 @@ body {
     overflow: visible !important;
     background: #ffffff !important;
     padding: 0 !important;
+    margin: 0 !important;
   }
 
   .preview-outer {
     height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   .preview-scale {
     transform: none !important;
   }
 
-  #resume-page {
+  .resume-page {
     box-shadow: none !important;
     margin: 0 !important;
-    width: 8.5in !important;
-    min-height: 0 !important;
+    page-break-after: always;
+    break-after: page;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    box-sizing: border-box !important;
+  }
+
+  .resume-page-letter {
+    page: letter-page;
+  }
+
+  .resume-page-a4 {
+    page: a4-page;
+  }
+
+  .resume-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
   }
 }
