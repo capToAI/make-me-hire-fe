@@ -24,3 +24,41 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@media print {
+  @page {
+    size: letter;
+    margin: 0;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .preview-scroll {
+    overflow: visible !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+  }
+
+  .preview-outer {
+    height: auto !important;
+  }
+
+  .preview-scale {
+    transform: none !important;
+  }
+
+  #resume-page {
+    box-shadow: none !important;
+    margin: 0 !important;
+    width: 8.5in !important;
+    min-height: 0 !important;
+  }
+}
