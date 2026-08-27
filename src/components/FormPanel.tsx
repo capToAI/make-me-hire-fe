@@ -8,10 +8,10 @@ import {
   EyeOff,
   GripVertical,
   PlusCircle,
-  Printer,
   Sparkles,
 } from "lucide-react";
 
+import { ExportDropdown } from "@/components/ExportDropdown";
 import { SectionCard } from "@/components/SectionCard";
 import { useDragReorder } from "@/hooks/useDragReorder";
 import type { ResumeAction } from "@/lib/resumeReducer";
@@ -103,10 +103,6 @@ export function FormPanel({ state, dispatch }: FormPanelProps) {
     dispatch({ type: "ADD_CUSTOM_SECTION" });
   };
 
-  const onClickPrint = () => {
-    window.print();
-  };
-
   // 7. Render
   return (
     <div className="no-print flex w-full flex-col bg-slate-50 lg:h-full lg:w-[480px] xl:w-[520px] lg:flex-shrink-0 lg:border-r lg:border-slate-200">
@@ -126,14 +122,7 @@ export function FormPanel({ state, dispatch }: FormPanelProps) {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={onClickPrint}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs transition-all hover:bg-indigo-700 active:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 cursor-pointer"
-        >
-          <Printer className="h-4 w-4" />
-          <span>Export / Print</span>
-        </button>
+        <ExportDropdown state={state} />
       </div>
 
       {/* Section Tabs Header Grid */}
