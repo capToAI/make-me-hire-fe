@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import Link from "next/link";
 import {
   ChevronLeft,
   ChevronRight,
@@ -108,8 +109,12 @@ export function FormPanel({ state, dispatch }: FormPanelProps) {
     <div className="no-print flex w-full flex-col bg-slate-50 lg:h-full lg:w-[480px] xl:w-[520px] lg:flex-shrink-0 lg:border-r lg:border-slate-200">
       {/* Top Bar Header */}
       <div className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white/90 px-5 py-3.5 backdrop-blur-md">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-xs">
+        <Link
+          href="/"
+          className="flex items-center gap-2.5 group transition-opacity hover:opacity-85"
+          title="Return to Home / Start New Resume"
+        >
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-xs group-hover:bg-indigo-700 transition-colors">
             <Sparkles className="h-4 w-4" />
           </div>
           <div>
@@ -120,7 +125,7 @@ export function FormPanel({ state, dispatch }: FormPanelProps) {
               Live Resume Editor
             </p>
           </div>
-        </div>
+        </Link>
 
         <ExportDropdown state={state} />
       </div>
