@@ -1,7 +1,7 @@
 import type { ResumeState } from "./types";
 import { normalizeResumeState } from "./normalizeResume";
 
-const API_BASE_URL =
+export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") || "http://localhost:3001";
 
 export interface ExtractResumeResponse {
@@ -9,6 +9,50 @@ export interface ExtractResumeResponse {
   data?: ResumeState;
   error?: string;
 }
+
+export interface GeneratePdfOptions {
+  html: string;
+  format?: "letter" | "a4";
+  fileName?: string;
+}
+
+/**
+ * Sends self-contained resume HTML to the backend `/resume-builder/generate-pdf` endpoint
+ * to render a high-fidelity, text-selectable vector PDF using headless Chromium.
+ */
+export async function generatePdfFromServer(
+  options: GeneratePdfOptions
+): Promise<Blob> {
+  const response = await fetch(`${API_BASE_URL}/resume-builder/generate-pdf`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      html: options.html,
+      format: options.format || "letter",
+      fileName: options.fileName || "Resume.pdf",
+    }),
+  });
+
+  if (!response.ok) {
+    let errorMessage = `Server failed to generate PDF (HTTP ${response.status})`;
+    try {
+      const errorData = await response.json();
+      if (errorData?.message) {
+        errorMessage = Array.isArray(errorData.message)
+          ? errorData.message.join(", ")
+          : errorData.message;
+      }
+    } catch {
+      // response might not be JSON
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.blob();
+}
+
 
 /**
  * Uploads a resume PDF file to the backend `/resume-builder/extract` endpoint
