@@ -1,31 +1,29 @@
 {
-  "name": "make-my-resume",
-  "version": "0.1.0",
+  "name": "make-my-resume-monorepo",
+  "version": "1.0.0",
   "private": true,
+  "description": "Monorepo for Make My Resume containing Next.js frontend and NestJS backend",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "canvg": "^4.0.3",
-    "html-to-image": "^1.11.13",
-    "html2canvas": "^1.4.1",
-    "jspdf": "^4.2.1",
-    "lucide-react": "^1.34.0",
-    "next": "16.3.1",
-    "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "dev": "concurrently -n \"frontend,backend\" -c \"blue,green\" \"npm run dev --workspace=frontend\" \"npm run start:dev --workspace=backend\"",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "dev:backend": "npm run start:dev --workspace=backend",
+    "start": "concurrently -n \"frontend,backend\" -c \"blue,green\" \"npm run start --workspace=frontend\" \"npm run start:prod --workspace=backend\"",
+    "start:frontend": "npm run start --workspace=frontend",
+    "start:backend": "npm run start:prod --workspace=backend",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "npm run build --workspace=frontend",
+    "build:backend": "npm run build --workspace=backend",
+    "lint": "npm run lint --workspaces",
+    "lint:frontend": "npm run lint --workspace=frontend",
+    "lint:backend": "npm run lint --workspace=backend",
+    "test": "npm run test --workspace=backend",
+    "test:backend": "npm run test --workspace=backend"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.3.1",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "concurrently": "^9.1.2"
   }
 }
