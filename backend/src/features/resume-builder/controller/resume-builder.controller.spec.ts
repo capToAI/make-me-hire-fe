@@ -1,11 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 
 import { ResumeBuilderController } from './resume-builder.controller';
-import { ResumeBuilderService } from '../services/resume-builder.service';
+import { ResumeExtractorAgent } from '../agent/resume-extractor.agent';
+import { SummaryRefinerAgent } from '../agent/summary-refiner.agent';
+import { SectionTypeEnum } from '../models/resume-section.dto';
 import { PdfExtractorService } from '../services/pdf-extractor.service';
 import { PdfGeneratorService } from '../services/pdf-generator.service';
-import { ResumeExtractorAgent } from '../agent/resume-extractor.agent';
-import { SectionTypeEnum } from '../models/resume-section.dto';
+import { ResumeBuilderService } from '../services/resume-builder.service';
 
 describe('ResumeBuilderController', () => {
   let controller: ResumeBuilderController;
@@ -19,6 +20,7 @@ describe('ResumeBuilderController', () => {
         ResumeBuilderService,
         PdfExtractorService,
         ResumeExtractorAgent,
+        SummaryRefinerAgent,
         {
           provide: PdfGeneratorService,
           useValue: {
@@ -100,5 +102,20 @@ describe('ResumeBuilderController', () => {
     );
     expect(mockRes.end).toHaveBeenCalled();
   });
-});
 
+  it('should call resumeBuilderService.refineSummary with DTO', async () => {
+    const mockPayload = {
+      summary: 'Experienced developer with frontend knowledge.',
+    };
+    const mockResponse = {
+      oldSummary: 'Experienced developer with frontend knowledge.',
+      newSummary: 'Seasoned Frontend Engineer with extensive experience building responsive web interfaces.',
+    };
+
+    jest.spyOn(service, 'refineSummary').mockResolvedValue(mockResponse);
+
+    const result = await controller.refineSummary(mockPayload);
+    expect(result).toEqual(mockResponse);
+    expect(service.refineSummary).toHaveBeenCalledWith(mockPayload);
+  });
+});

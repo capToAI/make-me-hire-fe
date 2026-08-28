@@ -1,30 +1,50 @@
 "use client";
 
 import { useRef } from "react";
-import type { SummaryData } from "@/lib/types";
-import type { ResumeAction } from "@/lib/resumeReducer";
 import {
-  Bold,
-  Trash2,
-  Code,
-  CheckCircle2,
   AlertCircle,
+  Bold,
+  CheckCircle2,
+  Code,
+  RefreshCw,
+  Sparkles,
+  Trash2,
+  X,
 } from "lucide-react";
+
+import { useSummaryRefine } from "@/hooks/useSummaryRefine";
+import { SummaryRefineModal } from "@/components/fields/SummaryRefineModal";
+import type { ResumeAction } from "@/lib/resumeReducer";
+import type { SummaryData } from "@/lib/types";
+
+interface SummaryFieldsProps {
+  sectionId: string;
+  data: SummaryData;
+  dispatch: (action: ResumeAction) => void;
+}
 
 export function SummaryFields({
   sectionId,
   data,
   dispatch,
-}: {
-  sectionId: string;
-  data: SummaryData;
-  dispatch: (action: ResumeAction) => void;
-}) {
+}: SummaryFieldsProps) {
+  // 1. External hooks
+  const {
+    isRefining,
+    isReviewOpen,
+    errorMessage,
+    reviewData,
+    refineSummary,
+    applyNewSummary,
+    skipRefinement,
+    clearError,
+  } = useSummaryRefine();
+
+  // 2. Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // 3. Derived values
   const text = data.text || "";
-
-  // Metrics calculations
   const wordsCount = text.trim() ? text.trim().split(/\s+/).length : 0;
   const charsCount = text.length;
   const estimatedReadSecs = Math.max(1, Math.round(wordsCount / 3.2));
@@ -64,14 +84,29 @@ export function SummaryFields({
   };
 
   const health = getHealth();
+  const HealthIcon = health.icon;
 
-  // Text update helper
+  // 4. Handlers
   const updateText = (newText: string) => {
     dispatch({
       type: "UPDATE_SECTION_DATA",
       sectionId,
       data: { text: newText },
     });
+  };
+
+  const onClickRefine = () => {
+    refineSummary(text);
+  };
+
+  const onApplyRefinedSummary = () => {
+    applyNewSummary((newSummary) => {
+      updateText(newSummary);
+    });
+  };
+
+  const onClickClear = () => {
+    updateText("");
   };
 
   // Toggle bold formatting (**text**)
@@ -87,7 +122,6 @@ export function SummaryFields({
     let newCursorPos = start;
 
     if (selectedText.length > 0) {
-      // Check if already bolded
       if (selectedText.startsWith("**") && selectedText.endsWith("**")) {
         const unbolded = selectedText.slice(2, -2);
         newText = text.substring(0, start) + unbolded + text.substring(end);
@@ -98,7 +132,6 @@ export function SummaryFields({
         newCursorPos = end + 4;
       }
     } else {
-      // Insert placeholder bold syntax
       const placeholder = "**key skill**";
       newText = text.substring(0, start) + placeholder + text.substring(end);
       newCursorPos = start + placeholder.length;
@@ -117,30 +150,56 @@ export function SummaryFields({
     }, 5);
   };
 
-  const HealthIcon = health.icon;
-
+  // 5. Render
   return (
     <div className="space-y-3">
       {/* Text Area Container */}
       <div className="space-y-0">
         {/* Toolbar Header above Textarea */}
         <div className="flex items-center justify-between rounded-t-xl border border-b-0 border-slate-200 bg-slate-50 px-3 py-1.5 text-xs">
-          {/* Left: Bold Button */}
-          <button
-            type="button"
-            onClick={handleToggleBold}
-            className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-100 transition-all cursor-pointer shadow-2xs"
-            title="Wrap selected text in **bold** syntax"
-          >
-            <Bold className="h-3.5 w-3.5 text-slate-800" />
-            <span>Bold</span>
-          </button>
+          {/* Left: Bold Button and Refine with AI Button */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleToggleBold}
+              className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-100 transition-all cursor-pointer shadow-2xs"
+              title="Wrap selected text in **bold** syntax"
+            >
+              <Bold className="h-3.5 w-3.5 text-slate-800" />
+              <span>Bold</span>
+            </button>
+
+            {/* Refine with AI Button */}
+            <button
+              type="button"
+              onClick={onClickRefine}
+              disabled={isRefining}
+              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-bold transition-all shadow-2xs cursor-pointer ${
+                isRefining
+                  ? "bg-purple-100 text-purple-700 border border-purple-300 cursor-not-allowed opacity-90"
+                  : "border border-purple-200/90 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 text-indigo-700 hover:from-indigo-100 hover:via-purple-100 hover:to-pink-100 hover:border-purple-300 active:scale-[0.98]"
+              }`}
+              title="Refine and elevate summary with AI"
+            >
+              {isRefining ? (
+                <>
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin text-purple-600" />
+                  <span>Refining with AI…</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+                  <span>Refine with AI</span>
+                </>
+              )}
+            </button>
+          </div>
 
           {/* Right: Clear Button */}
           {text && (
             <button
               type="button"
-              onClick={() => updateText("")}
+              onClick={onClickClear}
               className="rounded-md p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
               title="Clear text"
             >
@@ -148,6 +207,35 @@ export function SummaryFields({
             </button>
           )}
         </div>
+
+        {/* Validation / Error Banner */}
+        {errorMessage && (
+          <div className="flex items-center justify-between gap-2 border-x border-slate-200 bg-rose-50 px-3.5 py-2 text-xs text-rose-800 animate-in fade-in duration-150">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
+              <span className="font-medium">{errorMessage}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {text.trim() && (
+                <button
+                  type="button"
+                  onClick={onClickRefine}
+                  className="font-bold underline text-rose-700 hover:text-rose-900 cursor-pointer"
+                >
+                  Retry
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={clearError}
+                className="text-rose-500 hover:text-rose-700 p-0.5 cursor-pointer rounded"
+                title="Dismiss message"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Text Area */}
         <textarea
@@ -190,9 +278,17 @@ export function SummaryFields({
         {/* Health Tip Description */}
         <p className="text-[11px] text-slate-500 leading-normal pl-0.5">{health.tip}</p>
       </div>
+
+      {/* Comparison Review Modal */}
+      {reviewData && (
+        <SummaryRefineModal
+          isOpen={isReviewOpen}
+          oldSummary={reviewData.oldSummary}
+          newSummary={reviewData.newSummary}
+          onUseNewSummary={onApplyRefinedSummary}
+          onKeepOriginal={skipRefinement}
+        />
+      )}
     </div>
   );
 }
-
-
-

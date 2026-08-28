@@ -122,3 +122,81 @@ export async function extractResumeFromPdf(
     };
   }
 }
+
+export interface RefineSummaryData {
+  oldSummary: string;
+  newSummary: string;
+}
+
+export interface RefineSummaryResponse {
+  success: boolean;
+  data?: RefineSummaryData;
+  error?: string;
+}
+
+/**
+ * Sends current summary text to the backend `/resume-builder/refine-summary` endpoint
+ * to produce an elevated, professional version without altering factual data.
+ */
+export async function refineSummaryWithAi(
+  summary: string
+): Promise<RefineSummaryResponse> {
+  const trimmed = summary.trim();
+  if (!trimmed) {
+    return {
+      success: false,
+      error: "Please enter a summary first before refining with AI.",
+    };
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/resume-builder/refine-summary`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ summary: trimmed }),
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Server responded with status ${response.status}`;
+      try {
+        const errorData = await response.json();
+        if (errorData?.message) {
+          errorMessage = Array.isArray(errorData.message)
+            ? errorData.message.join(", ")
+            : errorData.message;
+        }
+      } catch {
+        // fallback to default status error
+      }
+      return { success: false, error: errorMessage };
+    }
+
+    const resJson = await response.json();
+    if (!resJson || typeof resJson.newSummary !== "string" || !resJson.newSummary.trim()) {
+      return {
+        success: false,
+        error: "AI refinement service returned an invalid or empty response.",
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        oldSummary: resJson.oldSummary || trimmed,
+        newSummary: resJson.newSummary.trim(),
+      },
+    };
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error
+        ? err.message
+        : "Failed to connect to the summary refinement service. Please check your connection.";
+    return {
+      success: false,
+      error: `Network / server connection error: ${message}`,
+    };
+  }
+}
+

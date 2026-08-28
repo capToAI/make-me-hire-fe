@@ -1,11 +1,14 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 
 import { ResumeExtractorAgent } from '../agent/resume-extractor.agent';
+import { SummaryRefinerAgent } from '../agent/summary-refiner.agent';
+import { RefineSummaryDto } from '../models/refine-summary.dto';
+import { RefineSummaryResponseDto } from '../models/refine-summary-response.dto';
 import { ResumeStateDto } from '../models/resume-state.dto';
 import { PdfExtractorService } from './pdf-extractor.service';
 
 /**
- * Main service orchestrating resume parsing and LangChain transformation.
+ * Main service orchestrating resume parsing, PDF conversion, and AI summary refinement.
  */
 @Injectable()
 export class ResumeBuilderService {
@@ -14,6 +17,7 @@ export class ResumeBuilderService {
   constructor(
     private readonly pdfExtractorService: PdfExtractorService,
     private readonly resumeExtractorAgent: ResumeExtractorAgent,
+    private readonly summaryRefinerAgent: SummaryRefinerAgent,
   ) {}
 
   /**
@@ -40,5 +44,27 @@ export class ResumeBuilderService {
     const resumeState = await this.resumeExtractorAgent.extractResume(rawText);
 
     return resumeState;
+  }
+
+  /**
+   * Refines a candidate's existing resume summary using the Summary Refiner Agent.
+   *
+   * @param {RefineSummaryDto} dto - Contains the original resume summary.
+   * @returns {Promise<RefineSummaryResponseDto>} Object with oldSummary and newSummary.
+   */
+  async refineSummary(dto: RefineSummaryDto): Promise<RefineSummaryResponseDto> {
+    const rawSummary = dto?.summary;
+
+    if (!rawSummary || !rawSummary.trim()) {
+      throw new BadRequestException('Summary text cannot be empty or contain only whitespace.');
+    }
+
+    this.logger.log(`Refining resume summary (${rawSummary.length} chars)`);
+    const newSummary = await this.summaryRefinerAgent.refineSummary(rawSummary);
+
+    return {
+      oldSummary: rawSummary,
+      newSummary,
+    };
   }
 }

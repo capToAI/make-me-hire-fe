@@ -19,13 +19,15 @@ import {
 import type { Response } from 'express';
 
 import { GeneratePdfDto } from '../models/generate-pdf.dto';
+import { RefineSummaryDto } from '../models/refine-summary.dto';
+import { RefineSummaryResponseDto } from '../models/refine-summary-response.dto';
 import { ResumeStateDto } from '../models/resume-state.dto';
 import { UploadResumeDto } from '../models/upload-resume.dto';
 import { PdfGeneratorService } from '../services/pdf-generator.service';
 import { ResumeBuilderService } from '../services/resume-builder.service';
 
 /**
- * Controller handling resume builder endpoints including PDF extraction and generation.
+ * Controller handling resume builder endpoints including PDF extraction, generation, and AI summary refinement.
  */
 @ApiTags('Resume Builder')
 @Controller('resume-builder')
@@ -34,7 +36,6 @@ export class ResumeBuilderController {
     private readonly resumeBuilderService: ResumeBuilderService,
     private readonly pdfGeneratorService: PdfGeneratorService,
   ) {}
-
 
   /**
    * Uploads and parses a PDF resume into the standardized ResumeState JSON structure.
@@ -140,5 +141,40 @@ export class ResumeBuilderController {
 
     res.end(pdfBuffer);
   }
-}
 
+  /**
+   * Refines a candidate's resume summary using the AI Summary Refinement Agent.
+   *
+   * @param {RefineSummaryDto} dto - Contains the original summary text.
+   * @returns {Promise<RefineSummaryResponseDto>} Object containing oldSummary and newSummary.
+   */
+  @Post('refine-summary')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Refine resume summary with AI',
+    description:
+      'Takes the candidate summary, refines it for executive presence, conciseness, and ATS impact, and returns both oldSummary and newSummary for side-by-side review.',
+  })
+  @ApiBody({
+    description: 'Summary refinement payload',
+    type: RefineSummaryDto,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully refined resume summary',
+    type: RefineSummaryResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Missing or invalid summary payload',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal Server Error - AI refinement agent failure',
+  })
+  async refineSummary(
+    @Body() dto: RefineSummaryDto,
+  ): Promise<RefineSummaryResponseDto> {
+    return this.resumeBuilderService.refineSummary(dto);
+  }
+}
