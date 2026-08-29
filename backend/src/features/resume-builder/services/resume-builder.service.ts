@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import 'multer';
 
 import { ResumeExtractorAgent } from '../agent/resume-extractor.agent';
 import { SummaryRefinerAgent } from '../agent/summary-refiner.agent';

@@ -15,6 +15,9 @@ RUN npm ci --workspace=frontend
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
+ARG NEXT_PUBLIC_API_URL=http://localhost:3001
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build --workspace=frontend
@@ -23,14 +26,18 @@ RUN npm run build --workspace=frontend
 FROM base AS runner
 WORKDIR /app/frontend
 
-ENV NODE_ENV=production
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
+ARG NODE_ENV=production
+ARG PORT=3000
+ARG HOSTNAME="0.0.0.0"
+
+ENV NODE_ENV=${NODE_ENV}
+ENV PORT=${PORT}
+ENV HOSTNAME=${HOSTNAME}
 
 COPY --from=builder /app/node_modules /app/node_modules
 COPY --from=builder /app/frontend /app/frontend
 COPY --from=builder /app/package.json /app/package.json
 
-EXPOSE 3000
+EXPOSE ${PORT}
 
 CMD ["npm", "run", "start"]

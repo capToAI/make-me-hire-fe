@@ -12,8 +12,10 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import { useSession } from "next-auth/react";
 import { ExportDropdown } from "@/components/ExportDropdown";
 import { SectionCard } from "@/components/SectionCard";
+import { UserMenu } from "@/components/auth/UserMenu";
 import { useDragReorder } from "@/hooks/useDragReorder";
 import type { ResumeAction } from "@/lib/resumeReducer";
 import type { ResumeState } from "@/lib/types";
@@ -24,6 +26,8 @@ interface FormPanelProps {
 }
 
 export function FormPanel({ state, dispatch }: FormPanelProps) {
+  const { data: session } = useSession();
+
   // 1. Refs
   const prevOrderLengthRef = useRef(state.sectionOrder.length);
 
@@ -127,7 +131,10 @@ export function FormPanel({ state, dispatch }: FormPanelProps) {
           </div>
         </Link>
 
-        <ExportDropdown state={state} />
+        <div className="flex items-center gap-2">
+          {session?.user && <UserMenu user={session.user} />}
+          <ExportDropdown state={state} />
+        </div>
       </div>
 
       {/* Section Tabs Header Grid */}

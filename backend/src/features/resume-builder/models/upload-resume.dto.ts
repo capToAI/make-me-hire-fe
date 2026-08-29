@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import 'multer';
 
 /**
  * DTO for Swagger multipart form-data PDF resume upload.

@@ -4,6 +4,17 @@
 FROM node:20-alpine AS base
 WORKDIR /app
 
+# Install system dependencies required for Puppeteer headless Chromium
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
+
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+
 # Install dependencies
 FROM base AS deps
 WORKDIR /app
@@ -15,7 +26,7 @@ RUN npm ci --workspace=backend
 # Build the NestJS application
 FROM base AS builder
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app ./
 COPY . .
 RUN npm run build --workspace=backend
 
@@ -23,13 +34,18 @@ RUN npm run build --workspace=backend
 FROM base AS runner
 WORKDIR /app/backend
 
-ENV NODE_ENV=production
-ENV PORT=3001
+ARG NODE_ENV=production
+ARG PORT=3001
+ARG PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+ENV NODE_ENV=${NODE_ENV}
+ENV PORT=${PORT}
+ENV PUPPETEER_EXECUTABLE_PATH=${PUPPETEER_EXECUTABLE_PATH}
 
 COPY --from=builder /app/node_modules /app/node_modules
 COPY --from=builder /app/backend /app/backend
 COPY --from=builder /app/package.json /app/package.json
 
-EXPOSE 3001
+EXPOSE ${PORT}
 
 CMD ["npm", "run", "start:prod"]

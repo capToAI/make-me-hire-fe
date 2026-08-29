@@ -17,6 +17,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
+import 'multer';
 
 import { GeneratePdfDto } from '../models/generate-pdf.dto';
 import { RefineSummaryDto } from '../models/refine-summary.dto';

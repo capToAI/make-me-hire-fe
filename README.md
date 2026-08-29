@@ -80,18 +80,56 @@ npm install
 
 ## Docker Deployment
 
-### Run with Docker Compose
-Start both frontend and backend services in containers:
+All services—**PostgreSQL database**, **NestJS backend**, and **Next.js frontend**—are containerized and orchestrated with Docker Compose. All configuration is driven by the root `.env` file.
+
+### 1. Environment Setup
+Copy the example environment file if you haven't already:
 ```bash
+cp .env.example .env
+```
+Key variables:
+- `DB_PORT`: Host port for PostgreSQL (defaults to `5433` to avoid collision with any existing host port 5432).
+- `OPENAI_API_KEY`: Required for the resume extraction AI agent.
+- `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`: NextAuth authentication credentials.
+
+### 2. Start All Services
+Build and start PostgreSQL, Backend, and Frontend:
+```bash
+npm run docker:up
+# or directly:
 docker compose up --build
 ```
 
-### Build Individual Docker Images
+To run in detached (background) mode:
+```bash
+docker compose up -d --build
+```
+
+### 3. Service Access
+- **Frontend**: [http://localhost:3000](http://localhost:3000)
+- **Backend API**: [http://localhost:3001](http://localhost:3001)
+- **Swagger Docs**: [http://localhost:3001/api/docs](http://localhost:3001/api/docs)
+- **PostgreSQL**: `localhost:5433` (DB: `resume_db`, User: `postgres`)
+
+### 4. Stop Services
+```bash
+npm run docker:down
+# or directly:
+docker compose down
+```
+
+To stop services and clear database volume data:
+```bash
+docker compose down -v
+```
+
+### 5. Build Individual Docker Images
 - **Frontend:**
   ```bash
   docker build -f frontend/Dockerfile -t make-my-resume-frontend .
   ```
-- **Backend:**
+- **Backend (includes Chromium for ATS vector PDF rendering):**
   ```bash
   docker build -f backend/Dockerfile -t make-my-resume-backend .
   ```
+
