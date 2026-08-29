@@ -24,6 +24,8 @@ import { createDefaultResume } from "@/lib/defaultResume";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { GoogleAuthCard } from "@/components/auth/GoogleAuthCard";
 import { AuthLoadingSkeleton } from "@/components/auth/AuthLoadingSkeleton";
+import { ResumeListDashboard } from "@/components/dashboard/ResumeListDashboard";
+import { CreateResumeModal } from "@/components/dashboard/CreateResumeModal";
 
 const STORAGE_KEY = "resume-draft";
 
@@ -38,6 +40,8 @@ export default function LandingPage() {
   const [extractionStep, setExtractionStep] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createModalMode, setCreateModalMode] = useState<"blank" | "import">("blank");
 
   // Check URL query parameters for NextAuth error flags on mount
   useEffect(() => {
@@ -71,13 +75,8 @@ export default function LandingPage() {
 
   // 1. Handle "Create From Scratch"
   const handleCreateFromScratch = () => {
-    try {
-      const defaultResume = createDefaultResume();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultResume));
-    } catch {
-      // LocalStorage access issues fallback gracefully
-    }
-    router.push("/builder");
+    setCreateModalMode("blank");
+    setIsCreateModalOpen(true);
   };
 
   // 2. Validate PDF file
@@ -241,10 +240,14 @@ export default function LandingPage() {
                 <UserMenu user={session.user} />
                 <button
                   type="button"
-                  onClick={handleCreateFromScratch}
-                  className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs sm:text-sm font-semibold text-slate-700 shadow-2xs transition-all hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100 cursor-pointer"
+                  onClick={() => {
+                    setCreateModalMode("blank");
+                    setIsCreateModalOpen(true);
+                  }}
+                  className="hidden sm:inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-2xs transition-all hover:bg-indigo-700 active:bg-indigo-800 cursor-pointer"
                 >
-                  Open Editor
+                  <FilePlus2 className="h-4 w-4" />
+                  <span>New Resume</span>
                 </button>
               </>
             ) : null}
@@ -323,176 +326,18 @@ export default function LandingPage() {
           /* Unauthenticated State: Show only Continue with Google */
           <GoogleAuthCard />
         ) : (
-          /* Authenticated State: Show Import Resume & Create From Scratch */
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-4xl mx-auto w-full items-stretch animate-in fade-in duration-300">
-            {/* Card 1: Import Resume */}
-            <div className="relative group flex flex-col justify-between rounded-2xl border-2 border-indigo-200 bg-white p-6 sm:p-8 shadow-sm hover:shadow-md hover:border-indigo-400 transition-all duration-300">
-              <div>
-                {/* Badge */}
-                <div className="flex items-center justify-between mb-4">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-extrabold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200">
-                    <Sparkles className="h-3 w-3 text-indigo-600" />
-                    Recommended
-                  </span>
-                  <span className="text-xs font-semibold text-slate-400">PDF Upload</span>
-                </div>
-
-                {/* Icon & Title */}
-                <div className="flex items-center gap-3.5 mb-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 group-hover:bg-indigo-100 transition-colors">
-                    <UploadCloud className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-900 tracking-tight">Import Resume</h2>
-                    <p className="text-xs text-slate-500 font-medium">AI-powered extraction from PDF</p>
-                  </div>
-                </div>
-
-                <p className="text-xs sm:text-sm text-slate-600 mb-5 leading-relaxed">
-                  Upload your existing PDF resume. Our AI agent extracts your contact info, experience, education, and skills directly into the editor.
-                </p>
-
-                {/* Upload Dropzone */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf,application/pdf"
-                  onChange={handleFileChange}
-                  disabled={isExtracting}
-                  className="hidden"
-                  id="resume-pdf-upload"
-                />
-
-                {!selectedFile ? (
-                  <div
-                    onClick={() => !isExtracting && fileInputRef.current?.click()}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    className={`border-2 border-dashed rounded-xl p-5 sm:p-6 text-center transition-all cursor-pointer select-none flex flex-col items-center justify-center gap-2 ${
-                      isDragging
-                        ? "border-indigo-500 bg-indigo-50/70 scale-[1.01]"
-                        : "border-slate-200 bg-slate-50/70 hover:border-indigo-400 hover:bg-indigo-50/30"
-                    }`}
-                  >
-                    <FileText className={`h-8 w-8 ${isDragging ? "text-indigo-600" : "text-slate-400"}`} />
-                    <div>
-                      <p className="text-xs sm:text-sm font-semibold text-slate-800">
-                        {isDragging ? "Drop your PDF here" : "Click to browse or drag & drop"}
-                      </p>
-                      <p className="text-[11px] text-slate-500 mt-0.5">Supports PDF up to 10MB</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-4 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-xs">
-                        <FileCheck className="h-5 w-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs sm:text-sm font-bold text-slate-900 truncate">{selectedFile.name}</p>
-                        <p className="text-[11px] text-slate-500 font-medium">{formatFileSize(selectedFile.size)}</p>
-                      </div>
-                    </div>
-
-                    {!isExtracting && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedFile(null);
-                          if (fileInputRef.current) fileInputRef.current.value = "";
-                        }}
-                        className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-white transition-colors cursor-pointer"
-                        title="Choose a different file"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Processing State or Action Button */}
-              <div className="mt-6">
-                {isExtracting ? (
-                  <div className="w-full rounded-xl bg-indigo-50 border border-indigo-200 p-4 text-center">
-                    <div className="flex items-center justify-center gap-2.5 text-indigo-700 font-bold text-sm">
-                      <RefreshCw className="h-4 w-4 animate-spin text-indigo-600" />
-                      <span>{extractionStep || "Processing resume…"}</span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 mt-1">Please wait while AI parses and normalizes your data</p>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={selectedFile ? handleImportResume : () => fileInputRef.current?.click()}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-xs hover:bg-indigo-700 active:bg-indigo-800 active:scale-[0.99] transition-all cursor-pointer"
-                  >
-                    <span>{selectedFile ? "Extract & Load Into Editor" : "Select PDF Resume"}</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Card 2: Create From Scratch */}
-            <div className="relative group flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-300">
-              <div>
-                {/* Badge */}
-                <div className="flex items-center justify-between mb-4">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
-                    <FilePlus2 className="h-3 w-3 text-slate-500" />
-                    Blank Canvas
-                  </span>
-                  <span className="text-xs font-semibold text-slate-400">Manual Entry</span>
-                </div>
-
-                {/* Icon & Title */}
-                <div className="flex items-center gap-3.5 mb-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-700 border border-slate-200 group-hover:bg-slate-200 transition-colors">
-                    <FilePlus2 className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-900 tracking-tight">Create From Scratch</h2>
-                    <p className="text-xs text-slate-500 font-medium">Step-by-step guided builder</p>
-                  </div>
-                </div>
-
-                <p className="text-xs sm:text-sm text-slate-600 mb-6 leading-relaxed">
-                  Start with a structured, ATS-compliant blank resume template. Add your personal details, work history, projects, and skills at your own pace.
-                </p>
-
-                {/* Feature check list */}
-                <div className="space-y-2.5 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-                  <div className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <span>Standardized ATS sections & customizable order</span>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <span>Live multi-device desktop & mobile preview</span>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <span>Instant high-quality Letter & A4 PDF export</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Button */}
-              <div className="mt-6">
-                <button
-                  type="button"
-                  onClick={handleCreateFromScratch}
-                  disabled={isExtracting}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-xs hover:bg-slate-800 active:bg-slate-950 active:scale-[0.99] transition-all cursor-pointer disabled:opacity-50"
-                >
-                  <span>Start Blank Resume</span>
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
+          /* Authenticated State: Show Resume List Dashboard */
+          <div className="w-full animate-in fade-in duration-300">
+            <ResumeListDashboard
+              onOpenCreateBlank={() => {
+                setCreateModalMode("blank");
+                setIsCreateModalOpen(true);
+              }}
+              onOpenImport={() => {
+                setCreateModalMode("import");
+                setIsCreateModalOpen(true);
+              }}
+            />
           </div>
         )}
 
@@ -539,6 +384,13 @@ export default function LandingPage() {
           <span>Fast, accurate, and ATS-compliant resume creation</span>
         </div>
       </footer>
+
+      {/* Global Create Resume Modal */}
+      <CreateResumeModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        initialMode={createModalMode}
+      />
     </div>
   );
 }

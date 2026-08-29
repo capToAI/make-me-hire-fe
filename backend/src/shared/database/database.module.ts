@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../../features/users/entities/user.entity';
 import { Account } from '../../features/users/entities/account.entity';
+import { Resume } from '../../features/resumes/entities/resume.entity';
 
 @Module({
   imports: [
@@ -33,7 +34,7 @@ import { Account } from '../../features/users/entities/account.entity';
         return {
           type: 'postgres',
           url,
-          entities: [User, Account],
+          entities: [User, Account, Resume],
           synchronize,
           autoLoadEntities: true,
           ssl,

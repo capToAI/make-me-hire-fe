@@ -1,4 +1,4 @@
-import type { ResumeState } from "./types";
+import type { ResumeListItem, ResumeState, SavedResume } from "./types";
 import { normalizeResumeState } from "./normalizeResume";
 
 export const API_BASE_URL =
@@ -199,4 +199,178 @@ export async function refineSummaryWithAi(
     };
   }
 }
+
+/**
+ * Fetches the authenticated user's list of saved resumes.
+ */
+export async function fetchUserResumes(): Promise<{
+  success: boolean;
+  data?: ResumeListItem[];
+  error?: string;
+}> {
+  try {
+    const res = await fetch("/api/resumes", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        error:
+          errJson.message ||
+          errJson.error ||
+          `Server responded with status ${res.status}`,
+      };
+    }
+
+    const list = await res.json();
+    return { success: true, data: Array.isArray(list) ? list : [] };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Failed to load resumes";
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * Fetches a specific resume by its ID for editing.
+ */
+export async function fetchResumeById(
+  id: string
+): Promise<{ success: boolean; data?: SavedResume; error?: string }> {
+  try {
+    const res = await fetch(`/api/resumes/${encodeURIComponent(id)}`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        error:
+          errJson.message ||
+          errJson.error ||
+          `Failed to fetch resume (status ${res.status})`,
+      };
+    }
+
+    const resume: SavedResume = await res.json();
+    if (resume?.data) {
+      resume.data = normalizeResumeState(resume.data);
+    }
+    return { success: true, data: resume };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Failed to load resume";
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * Creates a new resume record in the database.
+ */
+export async function createResumeRecord(payload: {
+  name?: string;
+  position?: string;
+  data?: ResumeState;
+}): Promise<{ success: boolean; data?: SavedResume; error?: string }> {
+  try {
+    const res = await fetch("/api/resumes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        error:
+          errJson.message ||
+          errJson.error ||
+          `Failed to create resume (status ${res.status})`,
+      };
+    }
+
+    const saved: SavedResume = await res.json();
+    if (saved?.data) {
+      saved.data = normalizeResumeState(saved.data);
+    }
+    return { success: true, data: saved };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Failed to create resume";
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * Updates an existing resume record in the database.
+ */
+export async function updateResumeRecord(
+  id: string,
+  payload: {
+    name?: string;
+    position?: string;
+    data?: ResumeState;
+  }
+): Promise<{ success: boolean; data?: SavedResume; error?: string }> {
+  try {
+    const res = await fetch(`/api/resumes/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        error:
+          errJson.message ||
+          errJson.error ||
+          `Failed to save resume (status ${res.status})`,
+      };
+    }
+
+    const updated: SavedResume = await res.json();
+    return { success: true, data: updated };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Failed to save resume";
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * Deletes a resume record from the database.
+ */
+export async function deleteResumeRecord(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`/api/resumes/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        error:
+          errJson.message ||
+          errJson.error ||
+          `Failed to delete resume (status ${res.status})`,
+      };
+    }
+
+    return { success: true };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Failed to delete resume";
+    return { success: false, error: msg };
+  }
+}
+
 

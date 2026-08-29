@@ -1,15 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-
 import Link from "next/link";
+
 import {
+  AlertCircle,
+  Briefcase,
+  Check,
   ChevronLeft,
   ChevronRight,
   EyeOff,
   GripVertical,
   PlusCircle,
+  RefreshCw,
   Sparkles,
+  Tag,
 } from "lucide-react";
 
 import { useSession } from "next-auth/react";
@@ -23,9 +28,26 @@ import type { ResumeState } from "@/lib/types";
 interface FormPanelProps {
   state: ResumeState;
   dispatch: (action: ResumeAction) => void;
+  resumeName?: string;
+  setResumeName?: (name: string) => void;
+  position?: string;
+  setPosition?: (pos: string) => void;
+  saveStatus?: "idle" | "saving" | "saved" | "error";
+  lastSavedAt?: Date | null;
+  saveNow?: () => void;
 }
 
-export function FormPanel({ state, dispatch }: FormPanelProps) {
+export function FormPanel({
+  state,
+  dispatch,
+  resumeName,
+  setResumeName,
+  position,
+  setPosition,
+  saveStatus,
+  lastSavedAt,
+  saveNow,
+}: FormPanelProps) {
   const { data: session } = useSession();
 
   // 1. Refs
@@ -112,26 +134,64 @@ export function FormPanel({ state, dispatch }: FormPanelProps) {
   return (
     <div className="no-print flex w-full flex-col bg-slate-50 lg:h-full lg:w-[480px] xl:w-[520px] lg:flex-shrink-0 lg:border-r lg:border-slate-200">
       {/* Top Bar Header */}
-      <div className="sticky top-0 z-40 flex items-center justify-between border-b border-slate-200 bg-white/90 px-5 py-3.5 backdrop-blur-md">
-        <Link
-          href="/"
-          className="flex items-center gap-2.5 group transition-opacity hover:opacity-85"
-          title="Return to Home / Start New Resume"
-        >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-xs group-hover:bg-indigo-700 transition-colors">
-            <Sparkles className="h-4 w-4" />
-          </div>
-          <div>
-            <h1 className="text-base font-bold tracking-tight text-slate-900 leading-none">
-              MakeMeHire
-            </h1>
-            <p className="mt-0.5 text-xs text-slate-500 font-medium">
-              Live Resume Editor
-            </p>
-          </div>
-        </Link>
+      <div className="sticky top-0 z-40 flex items-center justify-between border-b border-slate-200 bg-white/90 px-4 sm:px-5 py-3 backdrop-blur-md">
+        <div className="flex items-center gap-3 min-w-0">
+          <Link
+            href="/"
+            className="flex items-center gap-2 group transition-opacity hover:opacity-85 shrink-0"
+            title="Return to Dashboard"
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-xs group-hover:bg-indigo-700 transition-colors">
+              <Sparkles className="h-4 w-4" />
+            </div>
+          </Link>
 
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="text-sm sm:text-base font-bold tracking-tight text-slate-900 leading-none truncate max-w-[160px] sm:max-w-[240px]">
+                {resumeName || "Untitled Resume"}
+              </h1>
+              {position && position !== "General" && (
+                <span className="hidden md:inline-block rounded-md bg-indigo-50 border border-indigo-100 px-2 py-0.5 text-[11px] font-bold text-indigo-700 truncate max-w-[140px]">
+                  {position}
+                </span>
+              )}
+            </div>
+            <Link
+              href="/"
+              className="inline-block mt-0.5 text-[11px] text-slate-500 hover:text-indigo-600 font-medium transition-colors"
+            >
+              ← Back to Dashboard
+            </Link>
+          </div>
+        </div>
+
+        {/* Center/Right: Save status & User Actions */}
         <div className="flex items-center gap-2">
+          {saveStatus === "saving" && (
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100">
+              <RefreshCw className="h-3 w-3 animate-spin text-indigo-600" />
+              <span className="hidden sm:inline">Saving…</span>
+            </span>
+          )}
+          {saveStatus === "saved" && (
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
+              <Check className="h-3.5 w-3.5 text-emerald-600" />
+              <span className="hidden sm:inline">Saved to cloud</span>
+            </span>
+          )}
+          {saveStatus === "error" && (
+            <button
+              type="button"
+              onClick={saveNow}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer"
+              title="Click to retry saving"
+            >
+              <AlertCircle className="h-3.5 w-3.5 text-rose-600" />
+              <span>Retry Save</span>
+            </button>
+          )}
+
           {session?.user && <UserMenu user={session.user} />}
           <ExportDropdown state={state} />
         </div>

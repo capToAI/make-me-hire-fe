@@ -110,3 +110,22 @@ export interface ResumeState {
   sectionOrder: string[];
   sections: Record<string, Section>;
 }
+
+export interface SavedResume {
+  id: string;
+  userId: number;
+  name: string;
+  position: string;
+  data: ResumeState;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ResumeListItem {
+  id: string;
+  userId: number;
+  name: string;
+  position: string;
+  createdAt: string;
+  updatedAt: string;
+}

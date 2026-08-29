@@ -7,6 +7,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Account } from './account.entity';
+import { Resume } from '../../resumes/entities/resume.entity';
 
 @Entity('users')
 export class User {
@@ -30,4 +31,7 @@ export class User {
 
   @OneToMany(() => Account, (account) => account.user, { cascade: true })
   accounts?: Account[];
+
+  @OneToMany(() => Resume, (resume) => resume.user, { cascade: true })
+  resumes?: Resume[];
 }
