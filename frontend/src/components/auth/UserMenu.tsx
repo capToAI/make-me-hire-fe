@@ -47,7 +47,15 @@ export function UserMenu({ user }: UserMenuProps) {
     try {
       setIsSigningOut(true);
       await signOut({ callbackUrl: "/" });
-    } catch {
+      // Ensure page reloads cleanly if already on the home page
+      if (typeof window !== "undefined" && window.location.pathname === "/") {
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error("Sign out error:", err);
+      // Hard fallback if client-side signOut fails
+      window.location.href = "/api/auth/signout";
+    } finally {
       setIsSigningOut(false);
     }
   };
@@ -97,6 +105,7 @@ export function UserMenu({ user }: UserMenuProps) {
       {isOpen && (
         <div
           id="user-dropdown-menu"
+          onMouseDown={(e) => e.stopPropagation()}
           className="absolute right-0 mt-2 w-64 origin-top-right rounded-2xl border border-slate-200 bg-white p-2 shadow-xl ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-150 z-50"
         >
           {/* User profile summary */}

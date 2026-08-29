@@ -112,7 +112,7 @@ export function FormPanel({ state, dispatch }: FormPanelProps) {
   return (
     <div className="no-print flex w-full flex-col bg-slate-50 lg:h-full lg:w-[480px] xl:w-[520px] lg:flex-shrink-0 lg:border-r lg:border-slate-200">
       {/* Top Bar Header */}
-      <div className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white/90 px-5 py-3.5 backdrop-blur-md">
+      <div className="sticky top-0 z-40 flex items-center justify-between border-b border-slate-200 bg-white/90 px-5 py-3.5 backdrop-blur-md">
         <Link
           href="/"
           className="flex items-center gap-2.5 group transition-opacity hover:opacity-85"
