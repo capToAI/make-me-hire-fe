@@ -16,6 +16,11 @@ import {
 
 import { AtsScoreResponseDto } from '../models/ats-score-response.dto';
 import { CheckAtsScoreDto } from '../models/check-ats-score.dto';
+import {
+  ApplyTailoredResumeDto,
+  TailorResumeDto,
+  TailoredResumeResponseDto,
+} from '../models/resume-tailor.dto';
 import { AtsScoreService } from '../services/ats-score.service';
 
 /**
@@ -95,5 +100,56 @@ export class AtsScoreController {
   ): Promise<AtsScoreResponseDto> {
     const userIdentifier = this.extractUserIdentifier(headers);
     return this.atsScoreService.checkAtsScore(userIdentifier, dto);
+  }
+
+  @Post('tailor')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Tailor a resume specifically for a job description and compare before/after ATS scores',
+    description:
+      'Uses the Resume Tailoring Agent to enhance professional summary and bullet points, reorder existing skills, and identify missing job requirements. Does NOT invent experience or add unconfirmed skills. Returns side-by-side comparison data and score improvement metrics.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Resume successfully tailored and compared',
+    type: TailoredResumeResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Bad Request - Validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - User does not own resume' })
+  @ApiResponse({ status: 404, description: 'Not Found - Resume not found' })
+  async tailorResume(
+    @Headers() headers: Record<string, string | undefined>,
+    @Body() dto: TailorResumeDto,
+  ): Promise<TailoredResumeResponseDto> {
+    const userIdentifier = this.extractUserIdentifier(headers);
+    return this.atsScoreService.tailorResume(userIdentifier, dto);
+  }
+
+  @Post('apply-tailored')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Apply reviewed tailored resume data to the persistent resume record',
+    description:
+      'Updates the resume JSON data in the database with user-approved tailored content.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Tailored resume successfully applied and persisted',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - User does not own resume' })
+  @ApiResponse({ status: 404, description: 'Not Found - Resume not found' })
+  async applyTailoredResume(
+    @Headers() headers: Record<string, string | undefined>,
+    @Body() dto: ApplyTailoredResumeDto,
+  ): Promise<{ success: boolean; message: string; resumeId: string }> {
+    const userIdentifier = this.extractUserIdentifier(headers);
+    const updated = await this.atsScoreService.applyTailoredResume(userIdentifier, dto);
+    return {
+      success: true,
+      message: 'Tailored resume applied successfully',
+      resumeId: updated.id,
+    };
   }
 }

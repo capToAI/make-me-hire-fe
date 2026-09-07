@@ -13,13 +13,15 @@ import {
   Sparkles,
   Zap,
 } from "lucide-react";
-import { checkAtsScore, fetchUserResumes } from "@/lib/api";
-import type { AtsScoreData, ResumeListItem } from "@/lib/types";
+import { checkAtsScore, fetchUserResumes, tailorResume } from "@/lib/api";
+import type { AtsScoreData, ResumeListItem, TailoredResumeResponse } from "@/lib/types";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { ResumeSelector } from "@/components/ats-score/ResumeSelector";
 import { JobDescriptionInput } from "@/components/ats-score/JobDescriptionInput";
 import { AtsLoadingState } from "@/components/ats-score/AtsLoadingState";
 import { AtsScoreResult } from "@/components/ats-score/AtsScoreResult";
+import { TailorProgressState } from "@/components/ats-score/tailor/TailorProgressState";
+import { ResumeTailorView } from "@/components/ats-score/tailor/ResumeTailorView";
 
 function AtsScoreContent() {
   const router = useRouter();
@@ -33,6 +35,9 @@ function AtsScoreContent() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [atsResult, setAtsResult] = useState<AtsScoreData | null>(null);
+  const [isTailoring, setIsTailoring] = useState(false);
+  const [isRecalculating, setIsRecalculating] = useState(false);
+  const [tailoredResult, setTailoredResult] = useState<TailoredResumeResponse | null>(null);
 
   const isAuthenticated = status === "authenticated";
   const isLoadingAuth = status === "loading";
@@ -75,6 +80,7 @@ function AtsScoreContent() {
   // 2. Handle ATS Score Check action
   const onClickCheckScore = async () => {
     setErrorMessage(null);
+    setTailoredResult(null);
 
     if (!selectedResume) {
       setErrorMessage("Please select one of your saved resumes to evaluate.");
@@ -113,12 +119,93 @@ function AtsScoreContent() {
 
   const onResetAnalysis = () => {
     setAtsResult(null);
+    setTailoredResult(null);
     setErrorMessage(null);
   };
 
   const onSelectDifferentResume = () => {
     setAtsResult(null);
+    setTailoredResult(null);
     setErrorMessage(null);
+  };
+
+  // 3. Handle Tailor Resume Action
+  const onStartTailoring = async () => {
+    if (!selectedResume) {
+      setErrorMessage("Please select a resume to tailor.");
+      return;
+    }
+
+    if (!jobDescription.trim() || jobDescription.trim().length < 20) {
+      setErrorMessage(
+        "A valid job description is required for tailoring."
+      );
+      return;
+    }
+
+    setIsTailoring(true);
+    setErrorMessage(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    try {
+      const res = await tailorResume(selectedResume.id, jobDescription.trim());
+
+      if (res.success && res.data) {
+        setTailoredResult(res.data);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        setErrorMessage(
+          res.error || "Unable to complete resume tailoring. Please retry."
+        );
+      }
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to connect to tailoring service";
+      setErrorMessage(msg);
+    } finally {
+      setIsTailoring(false);
+    }
+  };
+
+  // 4. Handle Skill Recalculation
+  const onRecalculateWithSkills = async (
+    confirmedSkills: string[],
+    rejectedSkills: string[]
+  ) => {
+    if (!selectedResume || !jobDescription.trim()) return;
+
+    setIsRecalculating(true);
+    setErrorMessage(null);
+
+    try {
+      const res = await tailorResume(
+        selectedResume.id,
+        jobDescription.trim(),
+        confirmedSkills,
+        rejectedSkills
+      );
+
+      if (res.success && res.data) {
+        setTailoredResult(res.data);
+      } else {
+        setErrorMessage(
+          res.error || "Unable to update tailored resume with approved skills."
+        );
+      }
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to recalculate tailored score";
+      setErrorMessage(msg);
+    } finally {
+      setIsRecalculating(false);
+    }
+  };
+
+  // 5. Discard Tailoring & Return to ATS Result
+  const onDiscardTailoring = () => {
+    setTailoredResult(null);
+    setErrorMessage(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
@@ -200,12 +287,28 @@ function AtsScoreContent() {
           <div className="mx-auto max-w-2xl py-8">
             <AtsLoadingState />
           </div>
+        ) : isTailoring ? (
+          /* Resume Tailoring In Progress */
+          <div className="mx-auto max-w-2xl py-8">
+            <TailorProgressState />
+          </div>
+        ) : tailoredResult ? (
+          /* Tailored Resume Comparison & Review */
+          <ResumeTailorView
+            tailoredResult={tailoredResult}
+            jobDescription={jobDescription}
+            onDiscard={onDiscardTailoring}
+            onRecalculateWithSkills={onRecalculateWithSkills}
+            isRecalculating={isRecalculating}
+          />
         ) : atsResult ? (
           /* ATS Results Display */
           <AtsScoreResult
             result={atsResult}
             onReset={onResetAnalysis}
             onSelectDifferentResume={onSelectDifferentResume}
+            onTailorResume={onStartTailoring}
+            isTailoring={isTailoring}
           />
         ) : (
           /* ATS Evaluation Input Form */

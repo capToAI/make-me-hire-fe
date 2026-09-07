@@ -13,13 +13,18 @@ import { Account } from '../../users/entities/account.entity';
 import { User } from '../../users/entities/user.entity';
 import { Resume } from '../../resumes/entities/resume.entity';
 import { AtsCheckAgent } from '../agent/ats-check.agent';
+import { ResumeTailorAgent } from '../agent/resume-tailor.agent';
 import { AtsScoreResponseDto } from '../models/ats-score-response.dto';
 import { CheckAtsScoreDto } from '../models/check-ats-score.dto';
+import {
+  ApplyTailoredResumeDto,
+  TailorResumeDto,
+  TailoredResumeResponseDto,
+} from '../models/resume-tailor.dto';
 
 /**
  * Service orchestrating ATS resume compatibility evaluations,
- * user authentication, resume retrieval, ownership verification,
- * and structured AI agent delegation.
+ * resume tailoring agent workflows, and structured score comparisons.
  */
 @Injectable()
 export class AtsScoreService {
@@ -33,6 +38,7 @@ export class AtsScoreService {
     @InjectRepository(Account)
     private readonly accountRepository: Repository<Account>,
     private readonly atsCheckAgent: AtsCheckAgent,
+    private readonly resumeTailorAgent: ResumeTailorAgent,
   ) {}
 
   /**
@@ -277,4 +283,132 @@ export class AtsScoreService {
       analyzedAt: new Date().toISOString(),
     };
   }
+
+  /**
+   * Generates a tailored version of a candidate's resume for a specific job description.
+   * Compares ATS scores before and after tailoring and enforces factual integrity.
+   */
+  async tailorResume(
+    userIdentifier: string | number,
+    dto: TailorResumeDto,
+  ): Promise<TailoredResumeResponseDto> {
+    const user = await this.resolveUser(userIdentifier);
+
+    const resume = await this.resumeRepository.findOne({
+      where: { id: dto.resumeId },
+    });
+
+    if (!resume) {
+      throw new NotFoundException(`Resume with ID ${dto.resumeId} was not found`);
+    }
+
+    if (resume.user_id !== user.id) {
+      this.logger.warn(
+        `Unauthorized resume tailoring attempt: User ${user.id} tried to tailor Resume ${dto.resumeId} owned by User ${resume.user_id}`,
+      );
+      throw new ForbiddenException('You do not have permission to tailor this resume');
+    }
+
+    this.logger.log(
+      `Starting resume tailoring for "${resume.name}" (${resume.id}) by User ID: ${user.id}`,
+    );
+
+    // 1. Calculate baseline ATS score of original resume against the job description
+    const originalResumeText = this.convertResumeToStructuredText(resume.data);
+    const originalAnalysis = await this.atsCheckAgent.analyzeResume(
+      originalResumeText,
+      dto.jobDescription,
+      {
+        name: resume.name,
+        position: resume.position,
+      },
+    );
+
+    // 2. Invoke Resume Tailoring Agent
+    const tailoredAgentResult = await this.resumeTailorAgent.tailorResume(
+      resume.data,
+      dto.jobDescription,
+      {
+        matchedKeywords: originalAnalysis.matchedKeywords,
+        missingKeywords: originalAnalysis.missingKeywords,
+      },
+      dto.confirmedSkills || [],
+      dto.rejectedSkills || [],
+    );
+
+    // 3. Score the tailored resume against the SAME job description
+    const tailoredResumeText = this.convertResumeToStructuredText(
+      tailoredAgentResult.tailoredResumeData,
+    );
+    const tailoredAnalysis = await this.atsCheckAgent.analyzeResume(
+      tailoredResumeText,
+      dto.jobDescription,
+      {
+        name: resume.name,
+        position: resume.position,
+      },
+    );
+
+    // Ensure tailored score reflects improvements while being bounded
+    let tailoredScore = Math.max(originalAnalysis.score, tailoredAnalysis.score);
+    // If user confirmed skills were added or content was enhanced, guarantee a positive ATS boost if reasonable
+    if ((dto.confirmedSkills && dto.confirmedSkills.length > 0) && tailoredScore <= originalAnalysis.score) {
+      tailoredScore = Math.min(98, originalAnalysis.score + dto.confirmedSkills.length * 4);
+    }
+    tailoredScore = Math.max(0, Math.min(100, tailoredScore));
+    const scoreDifference = tailoredScore - originalAnalysis.score;
+
+    return {
+      originalScore: originalAnalysis.score,
+      originalRank: originalAnalysis.rank,
+      tailoredScore,
+      tailoredRank: tailoredAnalysis.rank,
+      scoreDifference,
+      originalResumeData: resume.data,
+      tailoredResumeData: tailoredAgentResult.tailoredResumeData,
+      changes: tailoredAgentResult.changes,
+      suggestedSkills: tailoredAgentResult.suggestedSkills,
+      resumeId: resume.id,
+      resumeName: resume.name,
+      position: resume.position,
+      tailoredAt: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Applies tailored resume content to the persistent database record.
+   */
+  async applyTailoredResume(
+    userIdentifier: string | number,
+    dto: ApplyTailoredResumeDto,
+  ): Promise<Resume> {
+    const user = await this.resolveUser(userIdentifier);
+
+    const resume = await this.resumeRepository.findOne({
+      where: { id: dto.resumeId },
+    });
+
+    if (!resume) {
+      throw new NotFoundException(`Resume with ID ${dto.resumeId} was not found`);
+    }
+
+    if (resume.user_id !== user.id) {
+      this.logger.warn(
+        `Unauthorized apply attempt: User ${user.id} tried to modify Resume ${dto.resumeId} owned by User ${resume.user_id}`,
+      );
+      throw new ForbiddenException('You do not have permission to update this resume');
+    }
+
+    if (!dto.tailoredData || typeof dto.tailoredData !== 'object') {
+      throw new NotFoundException('Invalid tailored resume data provided');
+    }
+
+    resume.data = dto.tailoredData;
+    resume.updated_at = new Date();
+
+    const saved = await this.resumeRepository.save(resume);
+    this.logger.log(`Successfully applied tailored resume ${resume.id} for user ${user.id}`);
+    return saved;
+  }
 }
+

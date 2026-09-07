@@ -139,17 +139,20 @@ function downloadBlob(blob: Blob, fileName: string): void {
  */
 export async function exportResumeToPdf(
   pageFormat: "letter" | "a4" = "letter",
-  fileName: string = "Resume.pdf"
+  fileName: string = "Resume.pdf",
+  containerElement?: HTMLElement | null
 ): Promise<void> {
-  // Query all rendered pages inside the preview area
-  const pageElements = document.querySelectorAll<HTMLElement>(
-    ".preview-scale .resume-page"
-  );
+  // Query rendered pages inside the specified container or global document
+  const root = containerElement || document;
+  let pageElements = root.querySelectorAll<HTMLElement>(".resume-page");
+  if (pageElements.length === 0) {
+    pageElements = root.querySelectorAll<HTMLElement>(".preview-scale .resume-page");
+  }
 
   const elementsToCapture =
     pageElements.length > 0
       ? Array.from(pageElements)
-      : [document.getElementById("resume-page") as HTMLElement].filter(Boolean);
+      : [root.querySelector("#resume-page") as HTMLElement].filter(Boolean);
 
   if (!elementsToCapture || elementsToCapture.length === 0) {
     throw new Error("No resume preview found to export.");
@@ -178,7 +181,200 @@ export async function exportResumeToPdf(
       "Server vector PDF generation failed. Falling back to native browser print:",
       error
     );
-    // Graceful fallback to browser print dialog (which also produces a vector PDF)
-    window.print();
+    // Graceful fallback to print preview
+    printResumePages(elementsToCapture, actualFormat, safeFileName);
   }
 }
+
+/**
+ * Prints rendered resume pages in an isolated, clean print iframe using the exact
+ * same HTML and CSS rules as the server vector PDF engine.
+ */
+export function printResumePages(
+  pages: HTMLElement[],
+  pageFormat: "letter" | "a4" = "letter",
+  fileName: string = "Resume"
+): void {
+  if (!pages || pages.length === 0) {
+    window.print();
+    return;
+  }
+
+  const isA4 = pages[0]?.classList.contains("resume-page-a4");
+  const actualFormat: "letter" | "a4" = isA4 ? "a4" : pageFormat;
+  const safeTitle = fileName.replace(/\.pdf$/i, "");
+  const fullHtml = buildResumeHtml(pages, actualFormat, safeTitle);
+
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  iframe.style.opacity = "0";
+  iframe.style.pointerEvents = "none";
+
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow?.document;
+  if (!doc) {
+    window.print();
+    return;
+  }
+
+  doc.open();
+  doc.write(fullHtml);
+  doc.close();
+
+  setTimeout(() => {
+    iframe.contentWindow?.focus();
+    iframe.contentWindow?.print();
+    setTimeout(() => {
+      if (document.body.contains(iframe)) {
+        document.body.removeChild(iframe);
+      }
+    }, 2000);
+  }, 300);
+}
+
+/**
+ * Prints a specific HTML element in an isolated, clean print iframe without extraneous UI chrome.
+ */
+export function printElement(
+  element: HTMLElement,
+  title: string = "Tailored Resume"
+): void {
+  const collectedStyles = collectDocumentStyles();
+  const clone = element.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll(".no-print").forEach((el) => el.remove());
+
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  iframe.style.opacity = "0";
+  iframe.style.pointerEvents = "none";
+
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow?.document;
+  if (!doc) {
+    window.print();
+    return;
+  }
+
+  doc.open();
+  doc.write(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>${title}</title>
+  <style>
+    ${collectedStyles}
+    @page {
+      margin: 0.5in;
+      size: auto;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: #ffffff !important;
+      color: #000000 !important;
+      margin: 0 !important;
+      padding: 0.25in !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .no-print {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  ${clone.outerHTML}
+</body>
+</html>`);
+  doc.close();
+
+  setTimeout(() => {
+    iframe.contentWindow?.focus();
+    iframe.contentWindow?.print();
+    setTimeout(() => {
+      if (document.body.contains(iframe)) {
+        document.body.removeChild(iframe);
+      }
+    }, 2000);
+  }, 300);
+}
+
+/**
+ * Exports a specific HTML element (such as a tailored resume sheet) to a high-fidelity PDF.
+ */
+export async function exportElementToPdf(
+  element: HTMLElement,
+  fileName: string = "Tailored-Resume.pdf",
+  pageFormat: "letter" | "a4" = "letter"
+): Promise<void> {
+  const collectedStyles = collectDocumentStyles();
+  const clone = element.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll(".no-print").forEach((el) => el.remove());
+
+  const isLetter = pageFormat === "letter";
+  const pageWidth = isLetter ? "8.5in" : "210mm";
+  const pageHeight = isLetter ? "11in" : "297mm";
+  const safeFileName = fileName.endsWith(".pdf") ? fileName : `${fileName}.pdf`;
+
+  const fullHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${safeFileName}</title>
+  <style>
+    ${collectedStyles}
+    @page {
+      size: ${pageWidth} ${pageHeight};
+      margin: 0.5in;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0 !important;
+      padding: 0.25in !important;
+      background: #ffffff !important;
+      color: #000000 !important;
+      font-family: Arial, Helvetica, sans-serif;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .no-print {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  ${clone.outerHTML}
+</body>
+</html>`;
+
+  try {
+    const pdfBlob = await generatePdfFromServer({
+      html: fullHtml,
+      format: pageFormat,
+      fileName: safeFileName,
+    });
+
+    downloadBlob(pdfBlob, safeFileName);
+  } catch (error) {
+    console.warn("Server PDF generation error, falling back to print dialog:", error);
+    printElement(element, safeFileName);
+  }
+}
+

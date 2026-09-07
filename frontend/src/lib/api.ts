@@ -3,6 +3,7 @@ import type {
   ResumeListItem,
   ResumeState,
   SavedResume,
+  TailoredResumeResponse,
 } from "./types";
 import { normalizeResumeState } from "./normalizeResume";
 
@@ -420,5 +421,103 @@ export async function checkAtsScore(
     return { success: false, error: msg };
   }
 }
+
+/**
+ * Invokes the Resume Tailoring Agent to optimize a resume for a target job description,
+ * calculating before & after ATS scores and generating a side-by-side comparison.
+ */
+export async function tailorResume(
+  resumeId: string,
+  jobDescription: string,
+  confirmedSkills: string[] = [],
+  rejectedSkills: string[] = []
+): Promise<{ success: boolean; data?: TailoredResumeResponse; error?: string }> {
+  const trimmedJd = (jobDescription || "").trim();
+  if (!resumeId) {
+    return { success: false, error: "Please select a resume to tailor." };
+  }
+  if (!trimmedJd) {
+    return { success: false, error: "Please provide a job description for tailoring." };
+  }
+
+  try {
+    const res = await fetch("/api/ats-score/tailor", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        resumeId,
+        jobDescription: trimmedJd,
+        confirmedSkills,
+        rejectedSkills,
+      }),
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        error:
+          errJson.message ||
+          errJson.error ||
+          `Server responded with status ${res.status}`,
+      };
+    }
+
+    const data: TailoredResumeResponse = await res.json();
+    if (data.tailoredResumeData) {
+      data.tailoredResumeData = normalizeResumeState(data.tailoredResumeData);
+    }
+    if (data.originalResumeData) {
+      data.originalResumeData = normalizeResumeState(data.originalResumeData);
+    }
+    return { success: true, data };
+  } catch (err: unknown) {
+    const msg =
+      err instanceof Error ? err.message : "Failed to tailor resume";
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * Applies approved tailored resume content directly to the user's database record.
+ */
+export async function applyTailoredResume(
+  resumeId: string,
+  tailoredData: ResumeState
+): Promise<{ success: boolean; message?: string; error?: string }> {
+  if (!resumeId) {
+    return { success: false, error: "Resume ID is required." };
+  }
+  if (!tailoredData) {
+    return { success: false, error: "Tailored resume data is missing." };
+  }
+
+  try {
+    const res = await fetch("/api/ats-score/apply-tailored", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resumeId, tailoredData }),
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        error:
+          errJson.message ||
+          errJson.error ||
+          `Server responded with status ${res.status}`,
+      };
+    }
+
+    const json = await res.json();
+    return { success: true, message: json.message || "Tailored resume applied successfully!" };
+  } catch (err: unknown) {
+    const msg =
+      err instanceof Error ? err.message : "Failed to apply tailored resume";
+    return { success: false, error: msg };
+  }
+}
+
 
 

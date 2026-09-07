@@ -8,7 +8,9 @@ import { Account } from '../../users/entities/account.entity';
 import { User } from '../../users/entities/user.entity';
 import { Resume } from '../../resumes/entities/resume.entity';
 import { AtsCheckAgent } from '../agent/ats-check.agent';
+import { ResumeTailorAgent } from '../agent/resume-tailor.agent';
 import { AtsAnalyzerTool } from '../agent/tools/ats-analyzer.tool';
+import { ResumeTailorTool } from '../agent/tools/resume-tailor.tool';
 import { AtsScoreService } from './ats-score.service';
 
 describe('AtsScoreService', () => {
@@ -94,6 +96,8 @@ describe('AtsScoreService', () => {
         AtsScoreService,
         AtsCheckAgent,
         AtsAnalyzerTool,
+        ResumeTailorAgent,
+        ResumeTailorTool,
         {
           provide: getRepositoryToken(Resume),
           useValue: mockResumeRepo,

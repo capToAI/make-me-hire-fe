@@ -154,3 +154,43 @@ export interface AtsScoreData {
   analyzedAt: string;
 }
 
+export type SkillRelevance = "high" | "medium" | "low";
+export type SkillStatus = "pending" | "confirmed" | "rejected";
+
+export interface SuggestedSkill {
+  name: string;
+  reason: string;
+  relevance: SkillRelevance;
+  status: SkillStatus;
+}
+
+export interface TailorChangeItem {
+  title: string;
+  description: string;
+  impact: string;
+}
+
+export interface TailorChangesGroup {
+  summary: TailorChangeItem[];
+  experience: TailorChangeItem[];
+  keywords: TailorChangeItem[];
+  skills: TailorChangeItem[];
+}
+
+export interface TailoredResumeResponse {
+  originalScore: number;
+  originalRank: AtsMatchRank;
+  tailoredScore: number;
+  tailoredRank: AtsMatchRank;
+  scoreDifference: number;
+  originalResumeData: ResumeState;
+  tailoredResumeData: ResumeState;
+  changes: TailorChangesGroup;
+  suggestedSkills: SuggestedSkill[];
+  resumeId: string;
+  resumeName: string;
+  position: string;
+  tailoredAt: string;
+}
+
+
