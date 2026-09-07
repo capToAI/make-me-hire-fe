@@ -7,6 +7,7 @@ import {
   RotateCcw,
   FileText,
 } from "lucide-react";
+import { ExportDropdown } from "@/components/ExportDropdown";
 import type { ResumeState } from "@/lib/types";
 import {
   flattenStateToBlocks,
@@ -20,7 +21,11 @@ import {
   PageBlocksRenderer,
 } from "./preview/BlockRenderer";
 
-export function PreviewPanel({ state }: { state: ResumeState }) {
+interface PreviewPanelProps {
+  state: ResumeState;
+}
+
+export function PreviewPanel({ state }: PreviewPanelProps) {
   const outerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
@@ -109,8 +114,8 @@ export function PreviewPanel({ state }: { state: ResumeState }) {
   const pageClass = pageFormat === "letter" ? "resume-page-letter" : "resume-page-a4";
 
   // Handlers for zoom controls
-  const handleZoomIn = () => setZoomLevel((z) => Math.min(2.0, z + 0.1));
-  const handleZoomOut = () => setZoomLevel((z) => Math.max(0.4, z - 0.1));
+  const handleZoomIn = () => setZoomLevel((z) => Math.min(2.0, +(z + 0.1).toFixed(1)));
+  const handleZoomOut = () => setZoomLevel((z) => Math.max(0.4, +(z - 0.1).toFixed(1)));
   const handleZoomReset = () => setZoomLevel(1.0);
 
   return (
@@ -118,8 +123,8 @@ export function PreviewPanel({ state }: { state: ResumeState }) {
       ref={outerRef}
       className="flex-1 min-w-0 min-h-0 lg:h-full flex flex-col bg-zinc-200/90 overflow-hidden"
     >
-      {/* Toolbar / Header */}
-      <div className="no-print bg-white border-b border-zinc-200 px-3 sm:px-4 py-2 flex items-center justify-between gap-2 shadow-xs z-10 select-none">
+      {/* Top Toolbar for Resume Preview Section */}
+      <div className="no-print bg-white border-b border-zinc-200 px-3 sm:px-4 py-2 flex items-center justify-between gap-3 shadow-2xs z-10 select-none shrink-0">
         {/* Left Group: Page Format & Page Count */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
@@ -155,8 +160,8 @@ export function PreviewPanel({ state }: { state: ResumeState }) {
           </div>
         </div>
 
-        {/* Right Group: Zoom Controls */}
-        <div className="flex items-center gap-2">
+        {/* Right Group: Zoom Controls & Download Dropdown */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
           <div className="inline-flex items-center rounded-lg bg-zinc-100 p-0.5 border border-zinc-200">
             <button
               type="button"
@@ -188,6 +193,10 @@ export function PreviewPanel({ state }: { state: ResumeState }) {
               </button>
             )}
           </div>
+
+          <div className="h-4 w-px bg-zinc-200 hidden sm:block" />
+
+          <ExportDropdown state={state} pageFormat={pageFormat} />
         </div>
       </div>
 

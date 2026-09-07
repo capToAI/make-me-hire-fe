@@ -18,10 +18,12 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 # Install dependencies
 FROM base AS deps
 WORKDIR /app
-COPY package.json package-lock.json* ./
+ENV NODE_OPTIONS="--dns-result-order=ipv4first"
+COPY package.json package-lock.json* .npmrc* ./
 COPY frontend/package.json ./frontend/
 COPY backend/package.json ./backend/
-RUN npm ci --workspace=backend
+RUN npm ci --workspace=backend --maxsockets=3 --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 --no-audit --no-fund
+
 
 # Build the NestJS application
 FROM base AS builder

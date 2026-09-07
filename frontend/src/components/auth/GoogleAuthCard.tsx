@@ -24,66 +24,46 @@ export function GoogleAuthCard() {
   };
 
   return (
-    <div className="max-w-xl mx-auto w-full">
-      <div className="relative group rounded-3xl border-2 border-indigo-200/80 bg-white p-7 sm:p-10 shadow-lg shadow-indigo-100/50 transition-all duration-300">
+    <div className="w-full max-w-md mx-auto">
+      <div className="relative group rounded-3xl border border-indigo-100 bg-white p-6 sm:p-8 shadow-xl shadow-indigo-100/50 transition-all duration-300">
         {/* Subtle decorative backdrop glow */}
-        <div className="absolute -top-10 -right-10 w-40 h-40 bg-indigo-100/50 rounded-full blur-2xl pointer-events-none -z-10" />
+        <div className="absolute -top-6 -right-6 w-32 h-32 bg-indigo-100/60 rounded-full blur-2xl pointer-events-none -z-10" />
 
-        {/* Badge */}
-        <div className="flex items-center justify-between mb-5">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs">
-            <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
-            <span>Sign In Required</span>
+        {/* Top Badges */}
+        <div className="flex items-center justify-between mb-4">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+            <Sparkles className="h-3 w-3 text-indigo-600" />
+            <span>Instant Access</span>
           </span>
-          <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400">
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400">
             <Lock className="h-3 w-3" />
             <span>Encrypted & Safe</span>
           </span>
         </div>
 
-        {/* Header content */}
-        <div className="text-left mb-6">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
-            Continue with Google to Build Your Resume
+        {/* Card Heading */}
+        <div className="text-left mb-5">
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+            Sign In to Start Building
           </h2>
-          <p className="mt-2.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
-            Sign in with your Google account to unlock our AI resume extraction engine, ATS-compliant blank canvas templates, and instant multi-format PDF export.
+          <p className="mt-1 text-xs sm:text-sm text-slate-500 leading-relaxed">
+            One click to create new resumes or import existing PDFs with AI.
           </p>
         </div>
 
-        {/* Value props checklist */}
-        <div className="space-y-2.5 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 sm:p-5 mb-8">
-          <div className="flex items-center gap-2.5 text-xs sm:text-sm text-slate-700 font-medium">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-            <span>AI-powered extraction from existing PDF resumes</span>
-          </div>
-          <div className="flex items-center gap-2.5 text-xs sm:text-sm text-slate-700 font-medium">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-            <span>Standardized ATS section ordering & live preview</span>
-          </div>
-          <div className="flex items-center gap-2.5 text-xs sm:text-sm text-slate-700 font-medium">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-            <span>Instant high-resolution Letter & A4 PDF export</span>
-          </div>
-          <div className="flex items-center gap-2.5 text-xs sm:text-sm text-slate-700 font-medium">
-            <ShieldCheck className="h-4 w-4 text-indigo-600 shrink-0" />
-            <span>Profile stored securely in database with one-click sign-in</span>
-          </div>
-        </div>
-
-        {/* Primary Google Login Button */}
-        <div>
+        {/* Primary Google Login Button - High Priority CTA */}
+        <div className="mb-5">
           <button
             type="button"
             id="continue-with-google-btn"
             disabled={isLoading}
             onClick={handleGoogleSignIn}
-            className="w-full relative flex items-center justify-center gap-3 rounded-2xl border border-slate-300 bg-white px-6 py-3.5 text-sm sm:text-base font-bold text-slate-800 shadow-sm hover:bg-slate-50 hover:border-slate-400 hover:shadow-md active:bg-slate-100 active:scale-[0.99] transition-all cursor-pointer disabled:opacity-60"
+            className="w-full relative flex items-center justify-center gap-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 active:bg-slate-100 px-5 py-3.5 text-sm sm:text-base font-bold text-slate-800 shadow-sm hover:shadow-md hover:border-slate-400 active:scale-[0.99] transition-all cursor-pointer disabled:opacity-60"
           >
             {isLoading ? (
               <>
-                <RefreshCw className="h-5 w-5 animate-spin text-indigo-600" />
-                <span>Redirecting to Google…</span>
+                <RefreshCw className="h-4 w-4 animate-spin text-indigo-600" />
+                <span>Connecting to Google…</span>
               </>
             ) : (
               <>
@@ -111,11 +91,28 @@ export function GoogleAuthCard() {
               </>
             )}
           </button>
-
-          <p className="mt-3 text-center text-[11px] text-slate-500 font-medium">
-            By continuing, you agree to MakeMeHire terms and privacy standards.
-          </p>
         </div>
+
+        {/* Compact Value Props */}
+        <div className="space-y-2 rounded-xl border border-slate-100 bg-slate-50/80 p-3.5 sm:p-4 mb-4">
+          <div className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+            <span>AI resume extraction & auto-filling</span>
+          </div>
+          <div className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+            <span>ATS-friendly layouts & live preview</span>
+          </div>
+          <div className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+            <span>Instant high-res Letter & A4 PDF export</span>
+          </div>
+        </div>
+
+        {/* Micro Footer */}
+        <p className="text-center text-[11px] text-slate-400">
+          Free to use • No credit card required • Secure OAuth 2.0
+        </p>
       </div>
     </div>
   );

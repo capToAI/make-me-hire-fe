@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, ChangeEvent, DragEvent } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
 import {
   Sparkles,
   UploadCloud,
@@ -250,36 +250,43 @@ export default function LandingPage() {
                   <span>New Resume</span>
                 </button>
               </>
-            ) : null}
+            ) : (
+              <button
+                type="button"
+                onClick={() => signIn("google", { callbackUrl: "/" })}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 active:bg-slate-100 px-3.5 py-1.5 text-xs sm:text-sm font-bold text-slate-800 shadow-2xs transition-all cursor-pointer"
+              >
+                <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                  />
+                </svg>
+                <span>Sign In with Google</span>
+              </button>
+            )}
           </div>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-16 flex-1 flex flex-col justify-center">
-        {/* Hero Section */}
-        <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-14">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold mb-5 shadow-2xs">
-            <Zap className="h-3.5 w-3.5 text-indigo-600" />
-            <span>Smart AI Resume Intelligence</span>
-          </div>
-
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-slate-900 leading-tight">
-            Build Your Perfect Resume{" "}
-            <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-800 bg-clip-text text-transparent">
-              In Minutes
-            </span>
-          </h1>
-
-          <p className="mt-4 sm:mt-5 text-sm sm:text-base lg:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
-            Choose how you want to begin. Upload your existing resume for instant AI extraction and formatting, or start with a fresh blank canvas.
-          </p>
-        </div>
-
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-6 lg:py-8 flex-1 flex flex-col justify-center w-full">
         {/* Authentication Notice Banner */}
         {authError && (
-          <div className="max-w-3xl mx-auto w-full mb-8 animate-in fade-in slide-in-from-top-2 duration-200">
-            <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-sm shadow-sm">
+          <div className="max-w-3xl mx-auto w-full mb-6 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-sm shadow-sm">
               <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="font-bold text-amber-900">Authentication Notice</p>
@@ -299,8 +306,8 @@ export default function LandingPage() {
 
         {/* Global Extraction Error Banner */}
         {errorMessage && (
-          <div className="max-w-3xl mx-auto w-full mb-8 animate-in fade-in slide-in-from-top-2 duration-200">
-            <div className="flex items-start gap-3 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm shadow-sm">
+          <div className="max-w-3xl mx-auto w-full mb-6 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex items-start gap-3 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm shadow-sm">
               <AlertCircle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="font-bold text-rose-900">Extraction Error</p>
@@ -320,13 +327,140 @@ export default function LandingPage() {
 
         {/* Action Area: Authentication-Dependent */}
         {isLoading ? (
-          /* Loading State: Shimmer skeleton to prevent card flashing */
+          /* Loading State: Shimmer skeleton */
           <AuthLoadingSkeleton />
         ) : !isAuthenticated ? (
-          /* Unauthenticated State: Show only Continue with Google */
-          <GoogleAuthCard />
+          /* Unauthenticated State: 2-Column Balanced Above-The-Fold Hero */
+          <div className="w-full animate-in fade-in duration-300">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+              {/* Left Column: Clear Value Proposition & Next Step Options */}
+              <div className="lg:col-span-7 flex flex-col text-left">
+                {/* Pill Badge */}
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold w-fit mb-4 shadow-2xs">
+                  <Zap className="h-3.5 w-3.5 text-indigo-600" />
+                  <span>Smart AI Resume Builder</span>
+                </div>
+
+                {/* Main Heading */}
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 leading-[1.15]">
+                  Build Your ATS Resume{" "}
+                  <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-800 bg-clip-text text-transparent">
+                    In Minutes
+                  </span>
+                </h1>
+
+                {/* Subtitle */}
+                <p className="mt-3 text-sm sm:text-base text-slate-600 leading-relaxed max-w-xl">
+                  Create recruiter-approved resumes formatted for Applicant Tracking Systems. Start fresh with templates or import your existing PDF for instant AI extraction.
+                </p>
+
+                {/* 2 Clear Next-Step Choices */}
+                <div className="mt-6 space-y-2.5 max-w-xl">
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Choose how you want to start:
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Option 1: AI PDF Import */}
+                    <button
+                      type="button"
+                      onClick={() => signIn("google", { callbackUrl: "/" })}
+                      className="group p-3.5 rounded-2xl border border-indigo-100 bg-white hover:border-indigo-400 hover:shadow-md active:bg-indigo-50/40 text-left transition-all cursor-pointer"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                          <UploadCloud className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-slate-900 group-hover:text-indigo-600 transition-colors block">
+                            1. Import Existing PDF
+                          </span>
+                          <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                            AI parses experience, skills & contact info automatically.
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* Option 2: Blank Canvas */}
+                    <button
+                      type="button"
+                      onClick={() => signIn("google", { callbackUrl: "/" })}
+                      className="group p-3.5 rounded-2xl border border-slate-200 bg-white hover:border-indigo-400 hover:shadow-md active:bg-indigo-50/40 text-left transition-all cursor-pointer"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                          <FilePlus2 className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-slate-900 group-hover:text-emerald-600 transition-colors block">
+                            2. Start Blank Canvas
+                          </span>
+                          <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                            Standardized ATS sections with live editor & real-time preview.
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Trust Badges */}
+                <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-slate-500 font-medium">
+                  <span className="inline-flex items-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Free Forever Tier
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" /> ATS Scannable
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Instant PDF Export
+                  </span>
+                </div>
+              </div>
+
+              {/* Right Column: Google Auth Card */}
+              <div className="lg:col-span-5 flex justify-center w-full">
+                <GoogleAuthCard />
+              </div>
+            </div>
+
+            {/* Compact Feature Ribbon */}
+            <div className="mt-8 lg:mt-10 grid grid-cols-2 md:grid-cols-4 gap-3 max-w-5xl mx-auto w-full">
+              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-white/90 border border-slate-200 shadow-2xs">
+                <ShieldCheck className="h-4 w-4 text-indigo-600 shrink-0" />
+                <div>
+                  <p className="text-xs font-bold text-slate-900">100% Private</p>
+                  <p className="text-[11px] text-slate-500 font-medium leading-none">In-browser local storage</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-white/90 border border-slate-200 shadow-2xs">
+                <Zap className="h-4 w-4 text-purple-600 shrink-0" />
+                <div>
+                  <p className="text-xs font-bold text-slate-900">AI Extraction</p>
+                  <p className="text-[11px] text-slate-500 font-medium leading-none">Fast structured parsing</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-white/90 border border-slate-200 shadow-2xs">
+                <Layers className="h-4 w-4 text-blue-600 shrink-0" />
+                <div>
+                  <p className="text-xs font-bold text-slate-900">Live Preview</p>
+                  <p className="text-[11px] text-slate-500 font-medium leading-none">Letter & A4 pagination</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-white/90 border border-slate-200 shadow-2xs">
+                <FileCode2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                <div>
+                  <p className="text-xs font-bold text-slate-900">ATS Friendly</p>
+                  <p className="text-[11px] text-slate-500 font-medium leading-none">Optimized for scanners</p>
+                </div>
+              </div>
+            </div>
+          </div>
         ) : (
-          /* Authenticated State: Show Resume List Dashboard */
+          /* Authenticated State: Direct Resume Dashboard */
           <div className="w-full animate-in fade-in duration-300">
             <ResumeListDashboard
               onOpenCreateBlank={() => {
@@ -340,41 +474,6 @@ export default function LandingPage() {
             />
           </div>
         )}
-
-        {/* Feature Badges Footer */}
-        <div className="mt-12 sm:mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto w-full">
-          <div className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
-            <ShieldCheck className="h-5 w-5 text-indigo-600 shrink-0" />
-            <div>
-              <p className="text-xs font-bold text-slate-900">100% Private</p>
-              <p className="text-[11px] text-slate-500 font-medium">In-browser local storage</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
-            <Zap className="h-5 w-5 text-purple-600 shrink-0" />
-            <div>
-              <p className="text-xs font-bold text-slate-900">AI Extraction</p>
-              <p className="text-[11px] text-slate-500 font-medium">Fast structured parsing</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
-            <Layers className="h-5 w-5 text-blue-600 shrink-0" />
-            <div>
-              <p className="text-xs font-bold text-slate-900">Live Preview</p>
-              <p className="text-[11px] text-slate-500 font-medium">Letter & A4 pagination</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
-            <FileCode2 className="h-5 w-5 text-emerald-600 shrink-0" />
-            <div>
-              <p className="text-xs font-bold text-slate-900">ATS Friendly</p>
-              <p className="text-[11px] text-slate-500 font-medium">Optimized for scanners</p>
-            </div>
-          </div>
-        </div>
       </main>
 
       {/* Footer */}
