@@ -55,6 +55,10 @@ describe('AtsCheckAgent', () => {
     expect(Array.isArray(result.missingSkills)).toBe(true);
     expect(result.matchedSkills).toContain('TypeScript');
     expect(result.matchedSkills).toContain('NestJS');
+    expect(result.matchedSkills).toContain('React');
+    expect(result.missingSkills).not.toContain('React');
+    expect(result.missingSkills).not.toContain('TypeScript');
+    expect(result.missingKeywords.map((k) => k.toLowerCase())).not.toContain('react');
     expect(result.missingSkills).toContain('Docker');
 
     process.env.OPENAI_API_KEY = originalKey;

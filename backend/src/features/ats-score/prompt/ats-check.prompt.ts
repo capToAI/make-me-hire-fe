@@ -19,11 +19,13 @@ Follow these strict operational rules:
    - 40 - 54: "Moderate Match" — The candidate has transferable skills, but lacks multiple mandatory qualifications or technologies.
    - 0 - 39: "Low Match" — Significant misalignment; candidate lacks critical required domain, technologies, and level of experience.
 
-3. KEYWORD & SKILL BREAKDOWN:
+3. KEYWORD & SKILL BREAKDOWN & SYNONYM EQUIVALENCE:
+   - Recognize common technology synonyms and phrasing variations as MATCHED skills rather than omissions (e.g. "React" == "React.js" == "ReactJS", "Node" == "Node.js", "TypeScript" == "TS", "Postgres" == "PostgreSQL", "AWS" == "Amazon Web Services", "REST API" == "RESTful APIs", "CI/CD" == "Continuous Integration", "Tailwind" == "Tailwind CSS", etc.).
+   - If the candidate possesses an equivalent synonym, classify it under "matchedSkills" and DO NOT flag it under "missingSkills".
    - "matchedKeywords": Specific keywords, domain terms, or tools found in BOTH the resume and the job description.
    - "missingKeywords": Critical keywords, methodologies, or terms emphasized in the job description but absent or weak in the resume.
    - "matchedSkills": Concrete technical or professional skills present in the resume that directly fulfill job requirements.
-   - "missingSkills": Essential technical or professional skills requested in the job description that are missing from the resume.
+   - "missingSkills": Essential technical or professional skills requested in the job description that are genuinely absent from the resume.
 
 4. FEEDBACK CRITERIA:
    - "strengths": 2-4 specific bullet points detailing where the candidate excels relative to the job requirements.

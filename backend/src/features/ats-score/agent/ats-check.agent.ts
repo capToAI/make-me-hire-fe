@@ -10,6 +10,7 @@ import {
 } from '../prompt/ats-check.prompt';
 import { AtsAnalyzerTool } from './tools/ats-analyzer.tool';
 import { AtsMatchRank } from '../models/ats-score-response.dto';
+import { isSkillCoveredByCandidate } from '../utils/skill-aliases';
 
 /**
  * Zod schema defining the expected structured response from the LLM for ATS analysis.
@@ -122,14 +123,48 @@ export class AtsCheckAgent {
       const clampedScore = Math.max(0, Math.min(100, Math.round(result.score)));
       const derivedRank = this.analyzerTool.getRankFromScore(clampedScore);
 
+      // Sanitize and ensure strict mutual exclusion between matched and missing
+      const matchedSkills = Array.from(new Set(result.matchedSkills || []));
+      const matchedKeywords = Array.from(new Set(result.matchedKeywords || []));
+
+      // Extract detected skills from candidate resume to ensure possessed skills are never marked missing
+      const detectedResumeSkills = this.analyzerTool.findSkills(resumeText);
+      const allCandidateSkills = [...detectedResumeSkills, ...matchedSkills];
+
+      // Build lowercase lookup set of all matched tokens
+      const matchedTokensLower = new Set([
+        ...matchedSkills.map((s) => s.toLowerCase().trim()),
+        ...matchedKeywords.map((k) => k.toLowerCase().trim()),
+      ]);
+
+      // Filter missingSkills: exclude anything already matched, detected in resume, or covered by alias
+      const missingSkills = Array.from(new Set(result.missingSkills || [])).filter(
+        (sk) => {
+          const lower = sk.toLowerCase().trim();
+          if (matchedTokensLower.has(lower)) return false;
+          if (isSkillCoveredByCandidate(sk, allCandidateSkills)) return false;
+          return true;
+        },
+      );
+
+      // Filter missingKeywords: exclude anything matched or covered by candidate skills
+      const missingKeywords = Array.from(new Set(result.missingKeywords || [])).filter(
+        (kw) => {
+          const lower = kw.toLowerCase().trim();
+          if (matchedTokensLower.has(lower)) return false;
+          if (isSkillCoveredByCandidate(kw, allCandidateSkills)) return false;
+          return true;
+        },
+      );
+
       return {
         score: clampedScore,
         rank: (result.rank as AtsMatchRank) || derivedRank,
         summary: result.summary.trim(),
-        matchedKeywords: Array.from(new Set(result.matchedKeywords || [])),
-        missingKeywords: Array.from(new Set(result.missingKeywords || [])),
-        matchedSkills: Array.from(new Set(result.matchedSkills || [])),
-        missingSkills: Array.from(new Set(result.missingSkills || [])),
+        matchedKeywords,
+        missingKeywords,
+        matchedSkills,
+        missingSkills,
         strengths: result.strengths || [],
         improvements: result.improvements || [],
         recommendations: result.recommendations || [],

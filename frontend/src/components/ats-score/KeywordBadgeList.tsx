@@ -32,9 +32,15 @@ export function KeywordBadgeList({
   const combinedMatched = Array.from(
     new Set([...matchedSkills, ...matchedKeywords])
   );
+
+  const matchedSetLower = new Set(
+    combinedMatched.map((m) => m.toLowerCase().trim())
+  );
+
+  // Strictly exclude anything already matched from the missing list
   const combinedMissing = Array.from(
     new Set([...missingSkills, ...missingKeywords])
-  );
+  ).filter((item) => !matchedSetLower.has(item.toLowerCase().trim()));
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
 import { AtsMatchRank } from '../../models/ats-score-response.dto';
+import { isSkillCoveredByCandidate } from '../../utils/skill-aliases';
 
 export interface DeterministicAtsResult {
   score: number;
@@ -244,10 +245,13 @@ export class AtsAnalyzerTool {
     const resumeTokens = this.extractTokens(resumeText);
     const jobTokens = this.extractTokens(jobDescription);
 
-    // Skill comparison
-    const resumeSkillsLower = new Set(resumeSkills.map((s) => s.toLowerCase()));
-    const matchedSkills = jobSkills.filter((s) => resumeSkillsLower.has(s.toLowerCase()));
-    const missingSkills = jobSkills.filter((s) => !resumeSkillsLower.has(s.toLowerCase()));
+    // Skill comparison with alias/synonym normalization
+    const matchedSkills = jobSkills.filter((js) =>
+      isSkillCoveredByCandidate(js, resumeSkills),
+    );
+    const missingSkills = jobSkills.filter(
+      (js) => !isSkillCoveredByCandidate(js, resumeSkills),
+    );
 
     // Keyword comparison
     const matchedTokens: string[] = [];
@@ -293,7 +297,7 @@ export class AtsAnalyzerTool {
     const score = Math.max(10, Math.min(98, rawScore));
     const rank = this.getRankFromScore(score);
 
-    // Format top matched and missing keywords (capitalized nicely)
+    // Format top matched keywords (capitalized nicely)
     const matchedKeywords = Array.from(
       new Set([
         ...matchedSkills,
@@ -303,14 +307,28 @@ export class AtsAnalyzerTool {
       ]),
     ).slice(0, 20);
 
-    const missingKeywords = Array.from(
+    const matchedTokensLower = new Set([
+      ...matchedSkills.map((s) => s.toLowerCase().trim()),
+      ...matchedKeywords.map((k) => k.toLowerCase().trim()),
+    ]);
+
+    // Strictly exclude any matched skill or candidate possessed skill from missing lists
+    const sanitizedMissingSkills = missingSkills.filter(
+      (s) => !matchedTokensLower.has(s.toLowerCase().trim()) && !isSkillCoveredByCandidate(s, resumeSkills),
+    );
+
+    const rawMissingKeywords = Array.from(
       new Set([
-        ...missingSkills,
+        ...sanitizedMissingSkills,
         ...missingTokens
           .slice(0, 15)
           .map((t) => t.charAt(0).toUpperCase() + t.slice(1)),
       ]),
-    ).slice(0, 15);
+    );
+
+    const missingKeywords = rawMissingKeywords
+      .filter((k) => !matchedTokensLower.has(k.toLowerCase().trim()) && !isSkillCoveredByCandidate(k, resumeSkills))
+      .slice(0, 15);
 
     // Dynamic strengths
     const strengths: string[] = [];
@@ -379,7 +397,7 @@ export class AtsAnalyzerTool {
       matchedKeywords,
       missingKeywords,
       matchedSkills,
-      missingSkills,
+      missingSkills: sanitizedMissingSkills,
       strengths,
       improvements,
       recommendations,

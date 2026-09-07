@@ -13,6 +13,7 @@ import {
   TailorChangeItem,
   TailoredChangesGroupDto,
 } from '../models/resume-tailor.dto';
+import { isSkillCoveredByCandidate } from '../utils/skill-aliases';
 
 const changeItemSchema = z.object({
   title: z.string().describe('Short headline of change made'),
@@ -168,12 +169,21 @@ export class ResumeTailorAgent {
         }
       }
 
-      // 3. Merge skills safely: candidate skills + confirmed skills only
+      // Collect all candidate original skills from all sections
+      const allOriginalSkills: string[] = [];
+      Object.values(originalResumeData.sections || {}).forEach((sec: any) => {
+        if (sec?.type === 'skills' && Array.isArray(sec.data?.items)) {
+          allOriginalSkills.push(...sec.data.items);
+        }
+      });
+      const allKnownCandidateSkills = [...allOriginalSkills, ...confirmedSkills];
+
+      // 3. Merge skills safely: candidate skills (including recognized synonyms) + confirmed skills only
       if (Array.isArray(result.tailoredSkills) && result.tailoredSkills.length > 0) {
         for (const secId of sectionOrder) {
           const section = sections[secId];
           if (section?.type === 'skills' && section.data) {
-            // Guarantee factual check: only allow skills that were either in original or in confirmedSkills
+            // Guarantee factual check: only allow skills that were either in original, confirmed, or equivalent aliases
             const originalSkills = new Set<string>();
             const origSec = originalResumeData.sections?.[secId];
             if (Array.isArray(origSec?.data?.items)) {
@@ -184,7 +194,11 @@ export class ResumeTailorAgent {
             const verifiedSkills: string[] = [];
             result.tailoredSkills.forEach((skill) => {
               const lower = skill.toLowerCase();
-              if (originalSkills.has(lower) || confirmedLower.has(lower)) {
+              if (
+                originalSkills.has(lower) ||
+                confirmedLower.has(lower) ||
+                isSkillCoveredByCandidate(skill, allKnownCandidateSkills)
+              ) {
                 verifiedSkills.push(skill);
               }
             });
@@ -201,12 +215,17 @@ export class ResumeTailorAgent {
         }
       }
 
-      // 4. Map suggested skills
+      // 4. Map suggested skills (strictly exclude any skill the candidate already possesses or has alias of)
       const rejectedSet = new Set(rejectedSkills.map((s) => s.toLowerCase()));
       const confirmedSet = new Set(confirmedSkills.map((s) => s.toLowerCase()));
 
       const suggestedSkills: SuggestedSkillItem[] = (result.suggestedSkills || [])
-        .filter((sk) => !confirmedSet.has(sk.name.toLowerCase()))
+        .filter((sk) => {
+          const nameLower = sk.name.toLowerCase();
+          if (confirmedSet.has(nameLower)) return false;
+          if (isSkillCoveredByCandidate(sk.name, allKnownCandidateSkills)) return false;
+          return true;
+        })
         .map((sk) => ({
           name: sk.name,
           reason: sk.reason,

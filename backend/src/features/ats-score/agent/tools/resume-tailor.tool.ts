@@ -5,6 +5,10 @@ import {
   TailorChangeItem,
   TailoredChangesGroupDto,
 } from '../../models/resume-tailor.dto';
+import {
+  areSkillsEquivalent,
+  isSkillCoveredByCandidate,
+} from '../../utils/skill-aliases';
 
 export interface DeterministicTailorResult {
   tailoredResumeData: Record<string, any>;
@@ -24,37 +28,58 @@ export class ResumeTailorTool {
   }
 
   /**
-   * Applies user-confirmed skills and reorders skills to prioritize job description skills.
+   * Applies user-confirmed skills, harmonizes equivalent synonyms to job phrasing,
+   * and reorders skills to prioritize job description skills.
    */
   applySkillsEnhancement(
     skillsSection: any,
     jobSkills: string[],
     confirmedSkills: string[] = [],
-  ): { items: string[]; added: string[]; reordered: boolean } {
-    const existingItems: string[] = Array.isArray(skillsSection?.data?.items)
+  ): {
+    items: string[];
+    added: string[];
+    reordered: boolean;
+    harmonized: Array<{ from: string; to: string }>;
+  } {
+    const rawItems: string[] = Array.isArray(skillsSection?.data?.items)
       ? [...skillsSection.data.items]
       : [];
 
-    const existingLower = new Set(existingItems.map((s) => s.toLowerCase()));
+    const jobSkillsLower = new Set(jobSkills.map((s) => s.toLowerCase()));
+
+    // 1. Harmonize existing skills to job's preferred phrasing if equivalent (e.g. React -> React.js)
+    const harmonized: Array<{ from: string; to: string }> = [];
+    const harmonizedItems = rawItems.map((skill) => {
+      if (jobSkillsLower.has(skill.toLowerCase())) return skill;
+      const aliasInJob = jobSkills.find((js) => areSkillsEquivalent(skill, js));
+      if (aliasInJob) {
+        harmonized.push({ from: skill, to: aliasInJob });
+        return aliasInJob;
+      }
+      return skill;
+    });
+
+    const existingLower = new Set(harmonizedItems.map((s) => s.toLowerCase()));
     const added: string[] = [];
 
-    // Add confirmed skills that are not already present
+    // 2. Add confirmed skills that are not already present
     confirmedSkills.forEach((skill) => {
       if (skill && !existingLower.has(skill.toLowerCase())) {
-        existingItems.push(skill);
+        harmonizedItems.push(skill);
         existingLower.add(skill.toLowerCase());
         added.push(skill);
       }
     });
 
-    const jobSkillsLower = new Set(jobSkills.map((s) => s.toLowerCase()));
-
-    // Separate into matched and other
+    // 3. Separate into matched and other
     const highPriority: string[] = [];
     const regularPriority: string[] = [];
 
-    existingItems.forEach((skill) => {
-      if (jobSkillsLower.has(skill.toLowerCase())) {
+    harmonizedItems.forEach((skill) => {
+      if (
+        jobSkillsLower.has(skill.toLowerCase()) ||
+        jobSkills.some((js) => areSkillsEquivalent(skill, js))
+      ) {
         highPriority.push(skill);
       } else {
         regularPriority.push(skill);
@@ -66,12 +91,13 @@ export class ResumeTailorTool {
       items: sortedItems,
       added,
       reordered: highPriority.length > 0,
+      harmonized,
     };
   }
 
   /**
    * Identifies suggested missing skills from the job description that do not exist
-   * in the candidate's resume or confirmed list.
+   * in the candidate's resume or confirmed list, strictly excluding synonyms of existing skills.
    */
   identifySuggestedSkills(
     resumeText: string,
@@ -81,14 +107,12 @@ export class ResumeTailorTool {
   ): SuggestedSkillItem[] {
     const jobSkills = this.analyzerTool.findSkills(jobDescription);
     const resumeSkills = this.analyzerTool.findSkills(resumeText);
-    const resumeSkillsLower = new Set([
-      ...resumeSkills.map((s) => s.toLowerCase()),
-      ...confirmedSkills.map((s) => s.toLowerCase()),
-    ]);
+    const allKnownSkills = [...resumeSkills, ...confirmedSkills];
     const rejectedLower = new Set(rejectedSkills.map((s) => s.toLowerCase()));
 
+    // Filter out any job skill already covered by candidate skills or their synonyms
     const missing = jobSkills.filter(
-      (skill) => !resumeSkillsLower.has(skill.toLowerCase()),
+      (skill) => !isSkillCoveredByCandidate(skill, allKnownSkills),
     );
 
     const jdLower = jobDescription.toLowerCase();
@@ -147,13 +171,23 @@ export class ResumeTailorTool {
     for (const secId of sectionOrder) {
       const section = sections[secId];
       if (section?.type === 'skills' && section.data) {
-        const { items, added, reordered } = this.applySkillsEnhancement(
+        const { items, added, reordered, harmonized } = this.applySkillsEnhancement(
           section,
           jobSkills,
           confirmedSkills,
         );
         section.data.items = items;
         skillsModified = true;
+
+        if (harmonized.length > 0) {
+          skillChanges.push({
+            title: 'Harmonized Technology Phrasing',
+            description: `Aligned existing skills to match job description keywords: ${harmonized
+              .map((h) => `'${h.from}' -> '${h.to}'`)
+              .join(', ')}.`,
+            impact: 'Ensures exact keyword matches for automated ATS screening filters without altering factual skills.',
+          });
+        }
 
         if (reordered) {
           skillChanges.push({
