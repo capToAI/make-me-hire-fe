@@ -98,8 +98,16 @@ export function BuilderHeader({
         )}
       </div>
 
-      {/* Right Group: User Profile */}
+      {/* Right Group: ATS Check & User Profile */}
       <div className="flex items-center gap-2 shrink-0">
+        <Link
+          href="/ats-score"
+          className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50/80 px-2.5 py-1 text-xs font-bold text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 transition-colors cursor-pointer"
+          title="Check ATS score"
+        >
+          <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+          <span className="hidden sm:inline">ATS Check</span>
+        </Link>
         {session?.user && <UserMenu user={session.user} />}
       </div>
     </header>

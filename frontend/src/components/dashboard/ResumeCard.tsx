@@ -7,6 +7,7 @@ import {
   Clock,
   Edit3,
   FileText,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 import type { ResumeListItem } from "@/lib/types";
@@ -91,10 +92,19 @@ export function ResumeCard({ resume, onDeleteClick }: ResumeCardProps) {
       <div className="flex items-center gap-2 border-t border-slate-100 pt-3.5">
         <Link
           href={`/builder?id=${encodeURIComponent(resume.id)}`}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-xs sm:text-sm font-bold text-white shadow-2xs hover:bg-indigo-700 active:bg-indigo-800 transition-all cursor-pointer"
+          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white shadow-2xs hover:bg-indigo-700 active:bg-indigo-800 transition-all cursor-pointer"
         >
           <Edit3 className="h-3.5 w-3.5" />
-          <span>Edit Resume</span>
+          <span>Edit</span>
+        </Link>
+
+        <Link
+          href={`/ats-score?resumeId=${encodeURIComponent(resume.id)}`}
+          className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 transition-all cursor-pointer"
+          title="Check ATS score for this resume"
+        >
+          <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+          <span>Check ATS</span>
         </Link>
 
         <button

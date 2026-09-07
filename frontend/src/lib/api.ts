@@ -1,4 +1,9 @@
-import type { ResumeListItem, ResumeState, SavedResume } from "./types";
+import type {
+  AtsScoreData,
+  ResumeListItem,
+  ResumeState,
+  SavedResume,
+} from "./types";
 import { normalizeResumeState } from "./normalizeResume";
 
 export const API_BASE_URL =
@@ -369,6 +374,49 @@ export async function deleteResumeRecord(
     return { success: true };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to delete resume";
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * Triggers an ATS resume score check comparing the specified saved resume
+ * against a job description.
+ */
+export async function checkAtsScore(
+  resumeId: string,
+  jobDescription: string
+): Promise<{ success: boolean; data?: AtsScoreData; error?: string }> {
+  const trimmedJd = (jobDescription || "").trim();
+  if (!resumeId) {
+    return { success: false, error: "Please select a resume to analyze." };
+  }
+  if (!trimmedJd) {
+    return { success: false, error: "Please provide a job description." };
+  }
+
+  try {
+    const res = await fetch("/api/ats-score", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resumeId, jobDescription: trimmedJd }),
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        error:
+          errJson.message ||
+          errJson.error ||
+          `Server responded with status ${res.status}`,
+      };
+    }
+
+    const data: AtsScoreData = await res.json();
+    return { success: true, data };
+  } catch (err: unknown) {
+    const msg =
+      err instanceof Error ? err.message : "Failed to evaluate ATS score";
     return { success: false, error: msg };
   }
 }

@@ -129,3 +129,28 @@ export interface ResumeListItem {
   createdAt: string;
   updatedAt: string;
 }
+
+export type AtsMatchRank =
+  | "Excellent Match"
+  | "Strong Match"
+  | "Good Match"
+  | "Moderate Match"
+  | "Low Match";
+
+export interface AtsScoreData {
+  score: number;
+  rank: AtsMatchRank;
+  summary: string;
+  matchedKeywords: string[];
+  missingKeywords: string[];
+  matchedSkills: string[];
+  missingSkills: string[];
+  strengths: string[];
+  improvements: string[];
+  recommendations: string[];
+  resumeId: string;
+  resumeName: string;
+  position: string;
+  analyzedAt: string;
+}
+
