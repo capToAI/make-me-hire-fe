@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { Clipboard, FileCode2, Trash2 } from "lucide-react";
 
 interface JobDescriptionInputProps {
@@ -31,12 +30,7 @@ export function JobDescriptionInput({
   onChange,
   disabled = false,
 }: JobDescriptionInputProps) {
-  const stats = useMemo(() => {
-    const trimmed = value.trim();
-    const words = trimmed ? trimmed.split(/\s+/).length : 0;
-    const chars = value.length;
-    return { words, chars };
-  }, [value]);
+  const chars = value.length;
 
   const onClickPaste = async () => {
     try {
@@ -64,7 +58,7 @@ export function JobDescriptionInput({
           htmlFor="job-description-textarea"
           className="text-xs sm:text-sm font-bold text-slate-800"
         >
-          Target Job Description
+          Job Description
         </label>
 
         <div className="flex items-center gap-1.5 text-xs">
@@ -72,21 +66,21 @@ export function JobDescriptionInput({
             type="button"
             onClick={onClickLoadSample}
             disabled={disabled}
-            className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50/70 px-2 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors cursor-pointer disabled:opacity-50"
             title="Load a sample job description"
           >
-            <FileCode2 className="h-3.5 w-3.5" />
-            <span>Load Sample</span>
+            <FileCode2 className="h-3 w-3" />
+            <span>Sample</span>
           </button>
 
           <button
             type="button"
             onClick={onClickPaste}
             disabled={disabled}
-            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50"
             title="Paste from clipboard"
           >
-            <Clipboard className="h-3.5 w-3.5" />
+            <Clipboard className="h-3 w-3" />
             <span>Paste</span>
           </button>
 
@@ -95,10 +89,10 @@ export function JobDescriptionInput({
               type="button"
               onClick={onClickClear}
               disabled={disabled}
-              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-500 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-400 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50"
               title="Clear text"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="h-3 w-3" />
             </button>
           )}
         </div>
@@ -110,18 +104,20 @@ export function JobDescriptionInput({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
-          placeholder="Paste the full target job posting or requirements here (responsibilities, required skills, technical stack, qualifications)..."
-          rows={10}
-          className="w-full resize-y rounded-2xl border border-slate-200 bg-white p-4 font-mono text-xs sm:text-sm leading-relaxed text-slate-800 placeholder:text-slate-400 placeholder:font-sans focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 disabled:bg-slate-50 disabled:text-slate-400"
+          maxLength={20000}
+          placeholder="Paste the full job description from LinkedIn, Indeed, or any job portal..."
+          rows={12}
+          className="w-full resize-y rounded-xl border border-slate-200 bg-white p-3.5 text-xs sm:text-sm leading-relaxed text-slate-800 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 disabled:bg-slate-50 disabled:text-slate-400"
         />
       </div>
 
       <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium px-1">
-        <span>Minimum 20 characters recommended for accurate parsing.</span>
-        <span>
-          {stats.words} words • {stats.chars} characters
+        <span>Paste the complete posting. Exact keywords matter for ATS matching.</span>
+        <span className="font-mono">
+          {chars.toLocaleString()} / 20,000
         </span>
       </div>
     </div>
   );
 }
+

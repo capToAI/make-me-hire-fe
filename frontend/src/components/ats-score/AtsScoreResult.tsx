@@ -1,145 +1,135 @@
 "use client";
 
-import Link from "next/link";
-import {
-  ArrowLeft,
-  Edit3,
-  Printer,
-  RotateCcw,
-  Sparkles,
-} from "lucide-react";
+import { useMemo } from "react";
+import { ArrowRight, Check, Sparkles, X } from "lucide-react";
 import type { AtsScoreData } from "@/lib/types";
-import { ScoreOverview } from "./ScoreOverview";
-import { KeywordBadgeList } from "./KeywordBadgeList";
-import { AtsFeedbackList } from "./AtsFeedbackList";
 
 interface AtsScoreResultProps {
   result: AtsScoreData;
-  onReset: () => void;
-  onSelectDifferentResume: () => void;
   onTailorResume: () => void;
   isTailoring?: boolean;
+  onReset?: () => void;
+  onSelectDifferentResume?: () => void;
 }
 
 export function AtsScoreResult({
   result,
-  onReset,
-  onSelectDifferentResume,
   onTailorResume,
   isTailoring = false,
 }: AtsScoreResultProps) {
-  const onClickPrint = () => {
-    if (typeof window !== "undefined") {
-      window.print();
-    }
-  };
+  // Combine unique keywords and skills for clean display
+  const combinedMatched = useMemo(() => {
+    return Array.from(
+      new Set([...(result.matchedSkills || []), ...(result.matchedKeywords || [])])
+    );
+  }, [result.matchedSkills, result.matchedKeywords]);
+
+  const combinedMissing = useMemo(() => {
+    const matchedSetLower = new Set(
+      combinedMatched.map((m) => m.toLowerCase().trim())
+    );
+    return Array.from(
+      new Set([...(result.missingSkills || []), ...(result.missingKeywords || [])])
+    ).filter((item) => !matchedSetLower.has(item.toLowerCase().trim()));
+  }, [result.missingSkills, result.missingKeywords, combinedMatched]);
+
+  const scoreColor = useMemo(() => {
+    if (result.score >= 75) return "text-emerald-600";
+    if (result.score >= 50) return "text-amber-500";
+    return "text-rose-600";
+  }, [result.score]);
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-3 duration-300">
-      {/* Action Bar */}
-      <div className="no-print flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onSelectDifferentResume}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer shadow-2xs"
-          >
-            <ArrowLeft className="h-4 w-4 text-slate-500" />
-            <span>Select Another Resume</span>
-          </button>
+    <div className="space-y-5 animate-in fade-in duration-200">
+      {/* 1. Score and Keywords Card */}
+      <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-xs space-y-6">
+        <div>
+          <h2 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
+            Your ATS Match Score for {result.resumeName || "Selected Resume"}{" "}
+            {result.position ? `(${result.position})` : ""}
+          </h2>
 
-          <button
-            type="button"
-            onClick={onReset}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer shadow-2xs"
-          >
-            <RotateCcw className="h-4 w-4 text-slate-500" />
-            <span>New Job Analysis</span>
-          </button>
+          <div className="mt-2 flex items-baseline gap-1">
+            <span className={`text-5xl sm:text-6xl font-black tracking-tight ${scoreColor}`}>
+              {result.score}
+            </span>
+            <span className="text-2xl font-bold text-slate-400">/100</span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onClickPrint}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer shadow-2xs"
-          >
-            <Printer className="h-4 w-4 text-slate-500" />
-            <span>Print Report</span>
-          </button>
+        {/* Matched Keywords Section */}
+        <div className="space-y-2.5">
+          <div className="flex items-center gap-1.5 text-sm font-bold text-slate-900">
+            <Check className="h-4 w-4 text-emerald-600 stroke-[2.5]" />
+            <span>Matched keywords ({combinedMatched.length})</span>
+          </div>
 
-          <Link
-            href={`/builder?id=${encodeURIComponent(result.resumeId)}`}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer shadow-2xs"
-          >
-            <Edit3 className="h-4 w-4 text-slate-500" />
-            <span>Edit in Builder</span>
-          </Link>
+          {combinedMatched.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {combinedMatched.map((kw, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50/90 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-100 transition-colors"
+                >
+                  {kw}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-slate-400 italic">
+              No matching keywords identified in this resume.
+            </p>
+          )}
+        </div>
 
-          {/* Primary Action: Tailor Resume */}
-          <button
-            type="button"
-            onClick={onTailorResume}
-            disabled={isTailoring}
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 px-4 py-2 text-xs sm:text-sm font-bold text-white hover:from-indigo-700 hover:to-purple-700 active:scale-95 transition-all shadow-sm cursor-pointer disabled:opacity-50"
-          >
-            <Sparkles className="h-4 w-4 text-indigo-200" />
-            <span>Tailor Resume for This Job</span>
-          </button>
+        {/* Missing Keywords Section */}
+        <div className="space-y-2.5">
+          <div className="flex items-center gap-1.5 text-sm font-bold text-slate-900">
+            <X className="h-4 w-4 text-rose-500 stroke-[2.5]" />
+            <span>Missing keywords ({combinedMissing.length})</span>
+          </div>
+
+          {combinedMissing.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {combinedMissing.map((kw, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50/90 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-100 transition-colors"
+                >
+                  {kw}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-emerald-600 font-medium">
+              Excellent match! No critical keywords missing.
+            </p>
+          )}
         </div>
       </div>
 
-      {/* 1. Overall Score Overview */}
-      <ScoreOverview
-        score={result.score}
-        rank={result.rank}
-        summary={result.summary}
-        resumeName={result.resumeName}
-        position={result.position}
-        analyzedAt={result.analyzedAt}
-      />
-
-      {/* Quick Tailoring Callout Banner */}
-      <div className="rounded-3xl border border-indigo-200/90 bg-gradient-to-r from-indigo-50/90 via-purple-50/70 to-blue-50/80 p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-2xs">
-            <Sparkles className="h-5 w-5" />
+      {/* 2. "Want a higher score?" Tailoring Callout Banner */}
+      <div className="rounded-2xl border border-indigo-200/90 bg-gradient-to-r from-indigo-50/80 via-blue-50/30 to-indigo-50/60 p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-indigo-950 font-bold text-sm sm:text-base">
+            <Sparkles className="h-4 w-4 text-indigo-600 shrink-0" />
+            <span>Want a higher score?</span>
           </div>
-          <div>
-            <h3 className="text-sm sm:text-base font-bold text-slate-900">
-              Boost Your ATS Score with Tailoring
-            </h3>
-            <p className="text-xs text-slate-600 mt-0.5 max-w-xl leading-relaxed">
-              Align your professional summary, highlight relevant skills, and optimize keywords specifically for this role without altering your authentic experience.
-            </p>
-          </div>
+          <p className="text-xs text-slate-600 max-w-md leading-relaxed">
+            Let AI rewrite your resume around this job description, truthfully, and watch the score climb.
+          </p>
         </div>
 
         <button
           type="button"
           onClick={onTailorResume}
           disabled={isTailoring}
-          className="shrink-0 inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm hover:bg-indigo-700 active:bg-indigo-800 transition-all cursor-pointer disabled:opacity-50"
+          className="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-xs active:scale-95 transition-all cursor-pointer whitespace-nowrap disabled:opacity-50"
         >
-          <Sparkles className="h-4 w-4" />
-          <span>Tailor Resume for This Job</span>
+          <span>Tailor for this Job</span>
+          <ArrowRight className="h-4 w-4" />
         </button>
       </div>
-
-      {/* 2. Keyword & Skill Breakdown */}
-      <KeywordBadgeList
-        matchedKeywords={result.matchedKeywords}
-        missingKeywords={result.missingKeywords}
-        matchedSkills={result.matchedSkills}
-        missingSkills={result.missingSkills}
-      />
-
-      {/* 3. Strengths, Improvements, Recommendations */}
-      <AtsFeedbackList
-        strengths={result.strengths}
-        improvements={result.improvements}
-        recommendations={result.recommendations}
-      />
     </div>
   );
 }
