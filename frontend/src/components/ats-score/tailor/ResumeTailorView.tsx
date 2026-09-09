@@ -1,18 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 import {
-  ArrowLeft,
-  Sparkles,
   AlertCircle,
+  ArrowLeft,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  FileText,
   ListChecks,
   RefreshCw,
+  Sparkles,
+  X,
 } from "lucide-react";
 import type { TailoredResumeResponse } from "@/lib/types";
-import { TailorScoreComparison } from "./TailorScoreComparison";
-import { SuggestedSkillsReview } from "./SuggestedSkillsReview";
-import { TailorChangesList } from "./TailorChangesList";
 import { ResumeComparisonView } from "./ResumeComparisonView";
 
 interface ResumeTailorViewProps {
@@ -33,52 +34,70 @@ export function ResumeTailorView({
   onRecalculateWithSkills,
   isRecalculating,
 }: ResumeTailorViewProps) {
-  const router = useRouter();
-
-  // Local state for skill selections
-  const [confirmedSkills, setConfirmedSkills] = useState<string[]>([]);
-  const [rejectedSkills, setRejectedSkills] = useState<string[]>([]);
-  const [hasPendingChanges, setHasPendingChanges] = useState(false);
-
-  // Studio Sidebar Tab: "skills" | "changes"
-  const [activeSideTab, setActiveSideTab] = useState<"skills" | "changes">("skills");
-
-  // Error state
+  // Local state for staged skills to add
+  const [stagedSkills, setStagedSkills] = useState<string[]>([]);
+  const [isJobDescExpanded, setIsJobDescExpanded] = useState(false);
+  const [isChangesExpanded, setIsChangesExpanded] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Extract original skills list for display
-  const originalSkillsSection = Object.values(
-    tailoredResult.originalResumeData.sections || {}
-  ).find((sec) => sec.type === "skills");
-  const existingSkills: string[] = Array.isArray(
-    (originalSkillsSection?.data as any)?.items
-  )
-    ? (originalSkillsSection?.data as any).items
-    : [];
+  // Extract tailored skills from tailoredResumeData for the matched keywords list
+  const matchedKeywords = useMemo(() => {
+    const tailoredSkillsSection = Object.values(
+      tailoredResult.tailoredResumeData.sections || {}
+    ).find((sec) => sec.type === "skills");
 
-  const handleConfirmSkill = (skillName: string) => {
-    setConfirmedSkills((prev) => Array.from(new Set([...prev, skillName])));
-    setRejectedSkills((prev) => prev.filter((s) => s !== skillName));
-    setHasPendingChanges(true);
+    const skillsItems: string[] = Array.isArray(
+      (tailoredSkillsSection?.data as any)?.items
+    )
+      ? (tailoredSkillsSection?.data as any).items
+      : [];
+
+    const changeKeywords = (tailoredResult.changes?.keywords || []).map(
+      (k) => k.title
+    );
+
+    const positionWords = tailoredResult.position
+      ? [tailoredResult.position]
+      : [];
+
+    return Array.from(
+      new Set([...positionWords, ...skillsItems, ...changeKeywords])
+    ).filter(Boolean);
+  }, [tailoredResult]);
+
+  // Missing skills from suggestedSkills
+  const missingSkills = useMemo(() => {
+    return (tailoredResult.suggestedSkills || []).map((s) => s.name);
+  }, [tailoredResult.suggestedSkills]);
+
+  // Toggle staging of a missing skill
+  const handleToggleSkill = (skillName: string) => {
+    setStagedSkills((prev) =>
+      prev.includes(skillName)
+        ? prev.filter((s) => s !== skillName)
+        : [...prev, skillName]
+    );
   };
 
-  const handleRejectSkill = (skillName: string) => {
-    setRejectedSkills((prev) => Array.from(new Set([...prev, skillName])));
-    setConfirmedSkills((prev) => prev.filter((s) => s !== skillName));
-    setHasPendingChanges(true);
-  };
-
-  const handleRecalculate = async () => {
+  // Trigger recalculation with staged skills
+  const handleRegenerate = async () => {
+    if (stagedSkills.length === 0) return;
     setErrorMessage(null);
     try {
-      await onRecalculateWithSkills(confirmedSkills, rejectedSkills);
-      setHasPendingChanges(false);
+      const rejected = missingSkills.filter((s) => !stagedSkills.includes(s));
+      await onRecalculateWithSkills(stagedSkills, rejected);
+      setStagedSkills([]);
     } catch (err: unknown) {
       const msg =
-        err instanceof Error ? err.message : "Failed to update tailored resume";
+        err instanceof Error ? err.message : "Failed to recalculate tailored score";
       setErrorMessage(msg);
     }
   };
+
+  // Predicted score calculation when keywords are staged
+  const stagedCount = stagedSkills.length;
+  const estimatedGain = stagedCount * 5;
+  const predictedScore = Math.min(100, tailoredResult.tailoredScore + estimatedGain);
 
   const totalChangesCount =
     (tailoredResult.changes?.summary?.length || 0) +
@@ -88,36 +107,33 @@ export function ResumeTailorView({
 
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
-      {/* Top Navigation Bar */}
-      <div className="no-print flex items-center justify-between border-b border-slate-200 pb-3">
-        {/* Left: Discard / Return action & title */}
+      {/* Top Header Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">
+              Tailor for <span className="text-indigo-600">Job</span>
+            </h1>
+          </div>
+          <p className="text-xs text-slate-500">
+            Paste a job description to see your ATS match score and the keywords you are missing, then tailor your resume around them.
+          </p>
+        </div>
+
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={onDiscard}
             disabled={isRecalculating}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer shadow-2xs disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer shadow-2xs disabled:opacity-50"
           >
             <ArrowLeft className="h-4 w-4 text-slate-500" />
             <span>Return to Score</span>
           </button>
-
-          <span className="hidden sm:inline-block h-4 w-px bg-slate-200" />
-
-          <div className="flex items-center gap-1 text-xs text-slate-500 font-medium truncate max-w-xs sm:max-w-md">
-            <span className="font-bold text-slate-800 truncate">
-              {tailoredResult.resumeName}
-            </span>
-            <span className="text-slate-400">·</span>
-            <span className="text-emerald-700 font-semibold truncate">
-              Tailoring Studio
-            </span>
-          </div>
         </div>
       </div>
 
-
-      {/* Error Banner */}
+      {/* Error Alert */}
       {errorMessage && (
         <div className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-3.5 text-rose-800 shadow-2xs">
           <AlertCircle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
@@ -128,142 +144,265 @@ export function ResumeTailorView({
         </div>
       )}
 
-      {/* AI Studio Split-Screen Layout */}
-      <div className="flex flex-col lg:flex-row gap-4 xl:gap-5 items-start">
-        {/* Left Column: Controls & AI Insights (Compact Score + Tabbed Review) */}
-        <div className="w-full lg:w-[420px] xl:w-[460px] shrink-0 flex flex-col gap-3">
-          {/* 1. Compact Score Delta Card */}
-          <TailorScoreComparison
-            originalScore={tailoredResult.originalScore}
-            originalRank={tailoredResult.originalRank}
-            tailoredScore={tailoredResult.tailoredScore}
-            tailoredRank={tailoredResult.tailoredRank}
-            scoreDifference={tailoredResult.scoreDifference}
-            resumeName={tailoredResult.resumeName}
-            position={tailoredResult.position}
-            compact={true}
-          />
+      {/* 2-Column Split: Inspector / Controls (Left) & Single Resume PDF Preview (Right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* Left Column: Controls, Score & Skills Review */}
+        <div className="lg:col-span-5 space-y-4">
+          {/* 1. Collapsible Job Description Card */}
+          <div className="rounded-2xl border border-slate-200/90 bg-white shadow-xs overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setIsJobDescExpanded(!isJobDescExpanded)}
+              className="w-full flex items-center justify-between p-4 text-left hover:bg-slate-50/70 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                {isJobDescExpanded ? (
+                  <ChevronUp className="h-4 w-4 text-slate-400 shrink-0" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" />
+                )}
+                <span className="text-xs sm:text-sm font-bold text-slate-800">
+                  Job Description
+                </span>
+                {tailoredResult.position && (
+                  <span className="text-xs text-slate-500 font-medium truncate max-w-[160px]">
+                    · {tailoredResult.position}
+                  </span>
+                )}
+              </div>
 
-          {/* 2. Unified Studio Sidebar Drawer Card */}
-          <div className="rounded-2xl border border-slate-200/90 bg-white shadow-xs flex flex-col overflow-hidden h-[calc(100vh-270px)] lg:h-[calc(100vh-250px)]">
-            {/* Top Navigation Tabs Header */}
-            <div className="p-2 border-b border-slate-100 bg-slate-50/70 shrink-0">
-              <div className="rounded-xl border border-slate-200/80 bg-white p-0.5 shadow-2xs flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => setActiveSideTab("skills")}
-                  className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                    activeSideTab === "skills"
-                      ? "bg-indigo-600 text-white shadow-2xs"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                  }`}
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  <span>Missing Skills</span>
-                  {tailoredResult.suggestedSkills.length > 0 && (
-                    <span
-                      className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
-                        activeSideTab === "skills"
-                          ? "bg-white/20 text-white"
-                          : "bg-indigo-100 text-indigo-800"
-                      }`}
-                    >
-                      {tailoredResult.suggestedSkills.length}
-                    </span>
-                  )}
-                </button>
+              <span className="text-xs font-semibold text-indigo-600 hover:text-indigo-700">
+                {isJobDescExpanded ? "Hide" : "Edit / View"}
+              </span>
+            </button>
 
-                <button
-                  type="button"
-                  onClick={() => setActiveSideTab("changes")}
-                  className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                    activeSideTab === "changes"
-                      ? "bg-indigo-600 text-white shadow-2xs"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                  }`}
-                >
-                  <ListChecks className="h-3.5 w-3.5" />
-                  <span>AI Changes</span>
-                  {totalChangesCount > 0 && (
-                    <span
-                      className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
-                        activeSideTab === "changes"
-                          ? "bg-white/20 text-white"
-                          : "bg-slate-200 text-slate-700"
-                      }`}
-                    >
-                      {totalChangesCount}
+            {isJobDescExpanded && (
+              <div className="p-4 pt-0 border-t border-slate-100 space-y-2 mt-2">
+                <textarea
+                  readOnly
+                  value={jobDescription}
+                  rows={8}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs leading-relaxed text-slate-700 select-all"
+                />
+                <div className="text-[11px] text-slate-400 text-right font-mono">
+                  {jobDescription.length.toLocaleString()} characters
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 2. ATS Match Score Card */}
+          <div className="rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs space-y-5">
+            <div>
+              <h2 className="text-sm sm:text-base font-bold text-slate-900">
+                ATS Match Score
+              </h2>
+
+              {/* Score Progression Comparison */}
+              <div className="mt-3 flex flex-wrap items-baseline gap-3">
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-xs font-medium text-slate-400">Base</span>
+                  <span className="text-xl font-bold text-slate-600">
+                    {tailoredResult.originalScore}
+                  </span>
+                </div>
+
+                <span className="text-slate-400 font-bold">→</span>
+
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-xs font-semibold text-indigo-700">Tailored</span>
+                  <span className="text-3xl font-black text-indigo-600">
+                    {tailoredResult.tailoredScore}
+                  </span>
+                  <span className="text-sm font-bold text-slate-400">/100</span>
+                  <span className="ml-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 border border-emerald-200">
+                    +{tailoredResult.scoreDifference}
+                  </span>
+                </div>
+
+                {/* Staged Score Gain Preview */}
+                {stagedCount > 0 && (
+                  <div className="flex items-baseline gap-1.5 animate-in fade-in duration-150">
+                    <span className="text-xs text-slate-400">After regenerating</span>
+                    <span className="text-lg font-bold text-emerald-600">
+                      ~{predictedScore}
                     </span>
-                  )}
-                </button>
+                    <span className="text-xs font-bold text-emerald-600">
+                      (+{estimatedGain})
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Score Dual-Tone Progress Bar */}
+              <div className="mt-3 h-2.5 w-full rounded-full bg-slate-100 overflow-hidden flex">
+                {/* Original Score Bar */}
+                <div
+                  style={{ width: `${tailoredResult.originalScore}%` }}
+                  className="h-full bg-slate-700 transition-all duration-500"
+                />
+                {/* Tailored Gain Bar */}
+                <div
+                  style={{ width: `${tailoredResult.scoreDifference}%` }}
+                  className="h-full bg-emerald-500 transition-all duration-500"
+                />
+                {/* Potential Extra Gain from Staged Skills */}
+                {stagedCount > 0 && (
+                  <div
+                    style={{ width: `${Math.min(estimatedGain, 100 - tailoredResult.tailoredScore)}%` }}
+                    className="h-full bg-indigo-400/80 animate-pulse transition-all duration-300"
+                  />
+                )}
               </div>
             </div>
 
-            {/* Scrollable Content Body */}
-            <div className="flex-1 min-h-0 overflow-y-auto p-3.5 sm:p-4">
-              {activeSideTab === "skills" ? (
-                <SuggestedSkillsReview
-                  suggestedSkills={tailoredResult.suggestedSkills}
-                  existingSkills={existingSkills}
-                  confirmedSkills={confirmedSkills}
-                  rejectedSkills={rejectedSkills}
-                  onConfirmSkill={handleConfirmSkill}
-                  onRejectSkill={handleRejectSkill}
-                  onRecalculateWithSkills={handleRecalculate}
-                  isUpdating={isRecalculating}
-                />
-              ) : (
-                <TailorChangesList changes={tailoredResult.changes} />
-              )}
+            {/* Matched Keywords */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-900">
+                <Check className="h-4 w-4 text-emerald-600 stroke-[2.5]" />
+                <span>Matched keywords ({matchedKeywords.length})</span>
+              </div>
+
+              <div className="flex flex-wrap gap-1.5 max-h-44 overflow-y-auto pr-1">
+                {matchedKeywords.map((kw, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50/80 px-2.5 py-1 text-xs font-medium text-slate-700"
+                  >
+                    {kw}
+                  </span>
+                ))}
+              </div>
             </div>
 
-            {/* Docked Action Footer: Pinned cleanly outside the scrollable body */}
-            {activeSideTab === "skills" && (hasPendingChanges || isRecalculating) && (
-              <div className="shrink-0 border-t border-indigo-100 bg-gradient-to-b from-indigo-50/90 to-indigo-100/50 p-3 sm:p-3.5 flex flex-col gap-2 shadow-md animate-in slide-in-from-bottom-2 duration-200 z-10">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5 truncate">
-                      <Sparkles className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
-                      <span>
-                        {confirmedSkills.length}{" "}
-                        {confirmedSkills.length === 1 ? "Skill" : "Skills"} Staged for Tailoring
-                      </span>
-                    </p>
-                    <p className="text-[11px] text-slate-500 mt-0.5 truncate">
-                      Integrates skills into bullet points & refreshes ATS score
-                    </p>
-                  </div>
+            {/* Missing Keywords (Interactive Selection) */}
+            <div className="space-y-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-900">
+                  <X className="h-4 w-4 text-rose-500 stroke-[2.5]" />
+                  <span>Missing keywords ({missingSkills.length})</span>
                 </div>
+                {stagedCount > 0 && (
+                  <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+                    {stagedCount} selected
+                  </span>
+                )}
+              </div>
 
-                <button
-                  type="button"
-                  onClick={handleRecalculate}
-                  disabled={isRecalculating}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm hover:bg-indigo-700 active:bg-indigo-800 transition-all cursor-pointer disabled:opacity-50"
-                >
-                  {isRecalculating ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                      <span>Re-Tailoring Resume with Skills...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4" />
-                      <span>✨ Re-Tailor Resume & Recalculate Score</span>
-                    </>
+              {missingSkills.length > 0 ? (
+                <>
+                  <div className="flex flex-wrap gap-1.5">
+                    {missingSkills.map((skill, i) => {
+                      const isStaged = stagedSkills.includes(skill);
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => handleToggleSkill(skill)}
+                          className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
+                            isStaged
+                              ? "border-indigo-400 bg-indigo-50 text-indigo-800 font-semibold shadow-2xs ring-1 ring-indigo-400/40"
+                              : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                          }`}
+                        >
+                          <span>{skill}</span>
+                          {isStaged ? (
+                            <X className="h-3 w-3 text-indigo-600" />
+                          ) : (
+                            <Check className="h-3 w-3 text-slate-400" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <p className="text-[11px] text-slate-500">
+                    Tick the keywords you genuinely have and we will add them into the tailored resume.
+                  </p>
+
+                  {/* Regenerate Action Button */}
+                  {stagedCount > 0 && (
+                    <div className="pt-2 animate-in fade-in duration-200">
+                      <button
+                        type="button"
+                        onClick={handleRegenerate}
+                        disabled={isRecalculating}
+                        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-xs sm:text-sm py-2.5 px-4 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        {isRecalculating ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                            <span>Regenerating Tailored Resume...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-4 w-4" />
+                            <span>
+                              Regenerate Tailored Resume ({stagedCount})
+                            </span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   )}
-                </button>
+                </>
+              ) : (
+                <p className="text-xs text-emerald-600 font-medium">
+                  All critical job keywords have been matched!
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* 3. AI Changes & Optimizations Summary (Collapsible) */}
+          <div className="rounded-2xl border border-slate-200/90 bg-white shadow-xs overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setIsChangesExpanded(!isChangesExpanded)}
+              className="w-full flex items-center justify-between p-4 text-left hover:bg-slate-50/70 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <ListChecks className="h-4 w-4 text-indigo-600" />
+                <span className="text-xs sm:text-sm font-bold text-slate-800">
+                  AI Optimizations Summary
+                </span>
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">
+                  {totalChangesCount}
+                </span>
+              </div>
+
+              <span className="text-xs font-semibold text-slate-500">
+                {isChangesExpanded ? "Hide" : "View"}
+              </span>
+            </button>
+
+            {isChangesExpanded && (
+              <div className="p-4 pt-0 border-t border-slate-100 space-y-3 max-h-72 overflow-y-auto text-xs text-slate-600 mt-2">
+                {tailoredResult.changes?.summary?.map((ch, i) => (
+                  <div key={i} className="rounded-lg bg-slate-50 p-2.5 border border-slate-100">
+                    <p className="font-bold text-slate-800">{ch.title}</p>
+                    <p className="text-slate-600 mt-0.5">{ch.description}</p>
+                  </div>
+                ))}
+
+                {tailoredResult.changes?.experience?.map((ch, i) => (
+                  <div key={i} className="rounded-lg bg-slate-50 p-2.5 border border-slate-100">
+                    <p className="font-bold text-slate-800">{ch.title}</p>
+                    <p className="text-slate-600 mt-0.5">{ch.description}</p>
+                  </div>
+                ))}
               </div>
             )}
           </div>
         </div>
 
-        {/* Right Column: Multi-Page Resume Studio Comparison */}
-        <div className="flex-1 min-w-0 w-full h-[calc(100vh-170px)] min-h-[640px] flex flex-col">
+        {/* Right Column: Single Canvas PDF Preview with [Tailored] and [Base Resume] Tabs */}
+        <div className="lg:col-span-7 h-[calc(100vh-170px)] min-h-[640px] flex flex-col">
           <ResumeComparisonView
             originalResume={tailoredResult.originalResumeData}
             tailoredResume={tailoredResult.tailoredResumeData}
             resumeName={tailoredResult.resumeName}
+            resumeId={tailoredResult.resumeId}
             className="h-full"
           />
         </div>
