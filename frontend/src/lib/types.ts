@@ -129,3 +129,69 @@ export interface ResumeListItem {
   createdAt: string;
   updatedAt: string;
 }
+
+export type AtsMatchRank =
+  | "Excellent Match"
+  | "Strong Match"
+  | "Good Match"
+  | "Moderate Match"
+  | "Low Match";
+
+export interface AtsScoreData {
+  score: number;
+  rank: AtsMatchRank;
+  summary: string;
+  matchedKeywords: string[];
+  missingKeywords: string[];
+  matchedSkills: string[];
+  missingSkills: string[];
+  strengths: string[];
+  improvements: string[];
+  recommendations: string[];
+  resumeId: string;
+  resumeName: string;
+  position: string;
+  analyzedAt: string;
+}
+
+export type SkillRelevance = "high" | "medium" | "low";
+export type SkillStatus = "pending" | "confirmed" | "rejected";
+
+export interface SuggestedSkill {
+  name: string;
+  reason: string;
+  relevance: SkillRelevance;
+  status: SkillStatus;
+}
+
+export interface TailorChangeItem {
+  title: string;
+  description: string;
+  impact: string;
+}
+
+export interface TailorChangesGroup {
+  summary: TailorChangeItem[];
+  experience: TailorChangeItem[];
+  projects?: TailorChangeItem[];
+  keywords: TailorChangeItem[];
+  skills: TailorChangeItem[];
+}
+
+export interface TailoredResumeResponse {
+  originalScore: number;
+  originalRank: AtsMatchRank;
+  tailoredScore: number;
+  tailoredRank: AtsMatchRank;
+  scoreDifference: number;
+  originalResumeData: ResumeState;
+  tailoredResumeData: ResumeState;
+  changes: TailorChangesGroup;
+  suggestedSkills: SuggestedSkill[];
+  resumeId: string;
+  resumeName: string;
+  position: string;
+  tailoredAt: string;
+}
+
+

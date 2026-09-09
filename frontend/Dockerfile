@@ -7,10 +7,13 @@ WORKDIR /app
 # Install dependencies based on the preferred package manager
 FROM base AS deps
 WORKDIR /app
-COPY package.json package-lock.json* ./
+RUN apk add --no-cache ca-certificates
+ENV NODE_OPTIONS="--dns-result-order=ipv4first"
+COPY package.json package-lock.json* .npmrc* ./
 COPY frontend/package.json ./frontend/
 COPY backend/package.json ./backend/
-RUN npm ci --workspace=frontend
+RUN npm ci --workspace=frontend --maxsockets=3 --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 --no-audit --no-fund
+
 
 # Rebuild the source code only when needed
 FROM base AS builder

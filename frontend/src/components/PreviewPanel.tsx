@@ -7,6 +7,7 @@ import {
   RotateCcw,
   FileText,
 } from "lucide-react";
+import { ExportDropdown } from "@/components/ExportDropdown";
 import type { ResumeState } from "@/lib/types";
 import {
   flattenStateToBlocks,
@@ -20,14 +21,32 @@ import {
   PageBlocksRenderer,
 } from "./preview/BlockRenderer";
 
-export function PreviewPanel({ state }: { state: ResumeState }) {
+export interface PreviewPanelProps {
+  state: ResumeState;
+  label?: string;
+  badgeText?: string;
+  badgeColor?: string;
+  customFileName?: string;
+  className?: string;
+  initialFormat?: PageFormat;
+}
+
+export function PreviewPanel({
+  state,
+  label,
+  badgeText,
+  badgeColor,
+  customFileName,
+  className,
+  initialFormat = "letter",
+}: PreviewPanelProps) {
   const outerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
   const sampleContentRef = useRef<HTMLDivElement>(null);
 
   // Resume document options & pagination state
-  const [pageFormat, setPageFormat] = useState<PageFormat>("letter");
+  const [pageFormat, setPageFormat] = useState<PageFormat>(initialFormat);
   const [pages, setPages] = useState<ResumeBlock[][]>([[]]);
   const [heightsMap, setHeightsMap] = useState<Record<string, number>>({});
   const [maxPageHeight, setMaxPageHeight] = useState<number>(930);
@@ -109,19 +128,38 @@ export function PreviewPanel({ state }: { state: ResumeState }) {
   const pageClass = pageFormat === "letter" ? "resume-page-letter" : "resume-page-a4";
 
   // Handlers for zoom controls
-  const handleZoomIn = () => setZoomLevel((z) => Math.min(2.0, z + 0.1));
-  const handleZoomOut = () => setZoomLevel((z) => Math.max(0.4, z - 0.1));
+  const handleZoomIn = () => setZoomLevel((z) => Math.min(2.0, +(z + 0.1).toFixed(1)));
+  const handleZoomOut = () => setZoomLevel((z) => Math.max(0.4, +(z - 0.1).toFixed(1)));
   const handleZoomReset = () => setZoomLevel(1.0);
 
   return (
     <div
       ref={outerRef}
-      className="flex-1 min-w-0 min-h-0 lg:h-full flex flex-col bg-zinc-200/90 overflow-hidden"
+      className={`flex-1 min-w-0 min-h-0 flex flex-col bg-zinc-200/90 overflow-hidden ${
+        className ?? "lg:h-full"
+      }`}
     >
-      {/* Toolbar / Header */}
-      <div className="no-print bg-white border-b border-zinc-200 px-3 sm:px-4 py-2 flex items-center justify-between gap-2 shadow-xs z-10 select-none">
-        {/* Left Group: Page Format & Page Count */}
+      {/* Top Toolbar for Resume Preview Section */}
+      <div className="no-print bg-white border-b border-zinc-200 px-3 sm:px-4 py-2 flex items-center justify-between gap-3 shadow-2xs z-10 select-none shrink-0 flex-wrap sm:flex-nowrap">
+        {/* Left Group: Page Format & Page Count & Optional Label */}
         <div className="flex items-center gap-3">
+          {label && (
+            <div className="flex items-center gap-2 mr-1">
+              <span className="text-xs sm:text-sm font-bold text-zinc-900 truncate">
+                {label}
+              </span>
+              {badgeText && (
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-bold shrink-0 ${
+                    badgeColor || "bg-zinc-100 text-zinc-700"
+                  }`}
+                >
+                  {badgeText}
+                </span>
+              )}
+            </div>
+          )}
+
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider hidden sm:inline">
               Format:
@@ -155,8 +193,8 @@ export function PreviewPanel({ state }: { state: ResumeState }) {
           </div>
         </div>
 
-        {/* Right Group: Zoom Controls */}
-        <div className="flex items-center gap-2">
+        {/* Right Group: Zoom Controls & Download Dropdown */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
           <div className="inline-flex items-center rounded-lg bg-zinc-100 p-0.5 border border-zinc-200">
             <button
               type="button"
@@ -188,6 +226,15 @@ export function PreviewPanel({ state }: { state: ResumeState }) {
               </button>
             )}
           </div>
+
+          <div className="h-4 w-px bg-zinc-200 hidden sm:block" />
+
+          <ExportDropdown
+            state={state}
+            pageFormat={pageFormat}
+            containerRef={outerRef}
+            customFileName={customFileName}
+          />
         </div>
       </div>
 

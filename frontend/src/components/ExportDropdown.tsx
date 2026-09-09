@@ -2,17 +2,21 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Download, FileText, Loader2, Printer } from "lucide-react";
-import { exportResumeToPdf } from "@/lib/pdfExport";
+import { exportResumeToPdf, printResumePages } from "@/lib/pdfExport";
 import type { ResumeState } from "@/lib/types";
 
 interface ExportDropdownProps {
   state: ResumeState;
   pageFormat?: "letter" | "a4";
+  containerRef?: React.RefObject<HTMLDivElement | null>;
+  customFileName?: string;
 }
 
 export function ExportDropdown({
   state,
   pageFormat = "letter",
+  containerRef,
+  customFileName,
 }: ExportDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -46,25 +50,29 @@ export function ExportDropdown({
     };
   }, [isOpen]);
 
+  const getSafeFileName = () => {
+    if (customFileName) {
+      return customFileName.endsWith(".pdf") ? customFileName : `${customFileName}.pdf`;
+    }
+    const basicSection = Object.values(state.sections).find(
+      (s) => s.type === "basic"
+    );
+    const fullName =
+      (basicSection?.data as { name?: string } | undefined)?.name?.trim() || "";
+    return fullName
+      ? `${fullName.replace(/[^a-zA-Z0-9_-]/g, "_")}_Resume.pdf`
+      : "Resume.pdf";
+  };
+
   const handleDownloadPdf = async () => {
     try {
       setIsExporting(true);
       setIsOpen(false);
-
-      const basicSection = Object.values(state.sections).find(
-        (s) => s.type === "basic"
-      );
-      const fullName =
-        (basicSection?.data as { name?: string } | undefined)?.name?.trim() || "";
-      const safeFileName = fullName
-        ? `${fullName.replace(/[^a-zA-Z0-9_-]/g, "_")}_Resume.pdf`
-        : "Resume.pdf";
-
-      await exportResumeToPdf(pageFormat, safeFileName);
+      const safeFileName = getSafeFileName();
+      await exportResumeToPdf(pageFormat, safeFileName, containerRef?.current);
     } catch (error) {
       console.error("PDF generation error:", error);
-      // Fallback to print preview if canvas capture fails
-      window.print();
+      handlePrint();
     } finally {
       setIsExporting(false);
     }
@@ -72,6 +80,16 @@ export function ExportDropdown({
 
   const handlePrint = () => {
     setIsOpen(false);
+    const safeFileName = getSafeFileName();
+    if (containerRef?.current) {
+      const pageElements = containerRef.current.querySelectorAll<HTMLElement>(
+        ".preview-scale .resume-page"
+      );
+      if (pageElements.length > 0) {
+        printResumePages(Array.from(pageElements), pageFormat, safeFileName);
+        return;
+      }
+    }
     window.print();
   };
 

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import { useResume } from "@/hooks/useResume";
+import { BuilderHeader } from "@/components/BuilderHeader";
 import { FormPanel } from "@/components/FormPanel";
 import { PreviewPanel } from "@/components/PreviewPanel";
 
@@ -76,19 +77,20 @@ function BuilderContent() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-100 lg:h-screen lg:flex-row lg:overflow-hidden">
-      <FormPanel
-        state={state}
-        dispatch={dispatch}
+    <div className="flex h-screen flex-col overflow-hidden bg-zinc-100">
+      <BuilderHeader
         resumeName={resumeName}
-        setResumeName={setResumeName}
         position={position}
-        setPosition={setPosition}
         saveStatus={saveStatus}
-        lastSavedAt={lastSavedAt}
         saveNow={saveNow}
       />
-      <PreviewPanel state={state} />
+      <div className="flex flex-1 min-h-0 flex-col lg:flex-row overflow-hidden">
+        <FormPanel
+          state={state}
+          dispatch={dispatch}
+        />
+        <PreviewPanel state={state} />
+      </div>
     </div>
   );
 }
