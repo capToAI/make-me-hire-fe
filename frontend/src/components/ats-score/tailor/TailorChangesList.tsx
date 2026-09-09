@@ -7,7 +7,6 @@ import {
   FileText,
   KeyRound,
   Wrench,
-  ChevronDown,
 } from "lucide-react";
 import type { TailorChangesGroup } from "@/lib/types";
 
@@ -29,28 +28,28 @@ export function TailorChangesList({ changes }: TailorChangesListProps) {
   const categories = [
     {
       id: "summary" as const,
-      label: "Professional Summary",
+      label: "Summary",
       icon: FileText,
       items: changes.summary || [],
       color: "text-blue-600 bg-blue-50 border-blue-200",
     },
     {
       id: "experience" as const,
-      label: "Work Experience",
+      label: "Experience",
       icon: Briefcase,
       items: changes.experience || [],
       color: "text-indigo-600 bg-indigo-50 border-indigo-200",
     },
     {
       id: "keywords" as const,
-      label: "Target Keywords",
+      label: "Keywords",
       icon: KeyRound,
       items: changes.keywords || [],
       color: "text-purple-600 bg-purple-50 border-purple-200",
     },
     {
       id: "skills" as const,
-      label: "Skills & Technologies",
+      label: "Skills",
       icon: Wrench,
       items: changes.skills || [],
       color: "text-emerald-600 bg-emerald-50 border-emerald-200",
@@ -63,24 +62,24 @@ export function TailorChangesList({ changes }: TailorChangesListProps) {
       : categories.filter((cat) => cat.id === activeTab);
 
   return (
-    <div className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-xs space-y-6">
+    <div className="space-y-4">
       {/* Header & Filter Tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="space-y-2.5">
         <div>
-          <h3 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+          <h3 className="text-base font-bold text-slate-900 tracking-tight">
             Tailoring Modifications ({totalCount})
           </h3>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Transparent breakdown of every refinement made to optimize ATS alignment.
+          <p className="text-xs text-slate-500 mt-0.5">
+            Breakdown of refinements made to optimize your ATS alignment.
           </p>
         </div>
 
         {/* Tab Filter */}
-        <div className="flex items-center gap-1 overflow-x-auto rounded-2xl bg-slate-100 p-1">
+        <div className="flex items-center gap-1 overflow-x-auto rounded-xl bg-slate-100 p-0.5">
           <button
             type="button"
             onClick={() => setActiveTab("all")}
-            className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+            className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
               activeTab === "all"
                 ? "bg-white text-slate-900 shadow-2xs"
                 : "text-slate-600 hover:text-slate-900"
@@ -91,7 +90,7 @@ export function TailorChangesList({ changes }: TailorChangesListProps) {
           <button
             type="button"
             onClick={() => setActiveTab("summary")}
-            className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+            className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
               activeTab === "summary"
                 ? "bg-white text-slate-900 shadow-2xs"
                 : "text-slate-600 hover:text-slate-900"
@@ -102,7 +101,7 @@ export function TailorChangesList({ changes }: TailorChangesListProps) {
           <button
             type="button"
             onClick={() => setActiveTab("experience")}
-            className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+            className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
               activeTab === "experience"
                 ? "bg-white text-slate-900 shadow-2xs"
                 : "text-slate-600 hover:text-slate-900"
@@ -113,7 +112,7 @@ export function TailorChangesList({ changes }: TailorChangesListProps) {
           <button
             type="button"
             onClick={() => setActiveTab("keywords")}
-            className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+            className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
               activeTab === "keywords"
                 ? "bg-white text-slate-900 shadow-2xs"
                 : "text-slate-600 hover:text-slate-900"
@@ -124,7 +123,7 @@ export function TailorChangesList({ changes }: TailorChangesListProps) {
           <button
             type="button"
             onClick={() => setActiveTab("skills")}
-            className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+            className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
               activeTab === "skills"
                 ? "bg-white text-slate-900 shadow-2xs"
                 : "text-slate-600 hover:text-slate-900"
@@ -136,33 +135,33 @@ export function TailorChangesList({ changes }: TailorChangesListProps) {
       </div>
 
       {/* Changes Grouped by Category */}
-      <div className="space-y-6">
+      <div className="space-y-4">
         {filteredCategories.map((cat) => {
           const Icon = cat.icon;
           if (cat.items.length === 0) return null;
 
           return (
-            <div key={cat.id} className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div className={`p-1.5 rounded-lg border ${cat.color}`}>
-                  <Icon className="h-4 w-4" />
+            <div key={cat.id} className="space-y-2">
+              <div className="flex items-center gap-1.5">
+                <div className={`p-1 rounded-md border ${cat.color}`}>
+                  <Icon className="h-3.5 w-3.5" />
                 </div>
-                <h4 className="text-sm font-bold text-slate-800">
+                <h4 className="text-xs font-bold text-slate-800">
                   {cat.label} ({cat.items.length})
                 </h4>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="flex flex-col gap-2">
                 {cat.items.map((item, idx) => (
                   <div
                     key={idx}
-                    className="flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-slate-50/50 p-4 hover:border-slate-300 transition-colors"
+                    className="flex flex-col justify-between rounded-xl border border-slate-200/90 bg-slate-50/50 p-3 hover:border-slate-300 transition-colors"
                   >
                     <div>
                       <div className="flex items-start gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                        <div>
-                          <h5 className="text-xs sm:text-sm font-bold text-slate-900">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                        <div className="min-w-0 flex-1">
+                          <h5 className="text-xs font-bold text-slate-900">
                             {item.title}
                           </h5>
                           <p className="mt-1 text-xs text-slate-600 leading-relaxed">
@@ -173,9 +172,9 @@ export function TailorChangesList({ changes }: TailorChangesListProps) {
                     </div>
 
                     {item.impact && (
-                      <div className="mt-3 pt-2.5 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
+                      <div className="mt-2.5 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
                         <span className="text-slate-400 font-medium">ATS Impact:</span>
-                        <span className="font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
+                        <span className="font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md text-[10px]">
                           {item.impact}
                         </span>
                       </div>

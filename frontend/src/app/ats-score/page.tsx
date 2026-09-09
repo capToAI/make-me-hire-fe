@@ -258,7 +258,13 @@ function AtsScoreContent() {
       </header>
 
       {/* Main Content */}
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-1 w-full">
+      <main
+        className={`relative z-10 mx-auto px-3 sm:px-6 flex-1 w-full transition-all duration-300 ${
+          tailoredResult
+            ? "max-w-[1720px] py-3 sm:py-4"
+            : "max-w-7xl py-8"
+        }`}
+      >
         {/* Unauthenticated View */}
         {!isLoadingAuth && !isAuthenticated ? (
           <div className="mx-auto max-w-xl text-center py-12">
@@ -407,12 +413,7 @@ function AtsScoreContent() {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="no-print relative z-10 border-t border-slate-200 bg-white py-6 text-center text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4">
-          <p>© {new Date().getFullYear()} MakeMeHire ATS Resume Evaluator. Zero data mutation guarantee.</p>
-        </div>
-      </footer>
+
     </div>
   );
 }

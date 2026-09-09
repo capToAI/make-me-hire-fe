@@ -11,6 +11,7 @@ interface TailorScoreComparisonProps {
   scoreDifference: number;
   resumeName: string;
   position: string;
+  compact?: boolean;
 }
 
 export function TailorScoreComparison({
@@ -21,9 +22,54 @@ export function TailorScoreComparison({
   scoreDifference,
   resumeName,
   position,
+  compact = false,
 }: TailorScoreComparisonProps) {
   const isImproved = scoreDifference > 0;
   const isUnchanged = scoreDifference === 0;
+
+  if (compact) {
+    return (
+      <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-2xs relative overflow-hidden">
+        <div className="flex items-center justify-between gap-2">
+          {/* Current vs Tailored Scores */}
+          <div className="flex items-center gap-2">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-center min-w-[64px]">
+              <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Baseline</span>
+              <span className="text-base font-black text-slate-700 leading-tight">{originalScore}</span>
+            </div>
+
+            <ArrowRight className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+
+            <div className="rounded-xl border border-emerald-300 bg-emerald-50 px-2.5 py-1.5 text-center min-w-[64px]">
+              <span className="text-[10px] font-bold text-emerald-700 block uppercase tracking-wider">Tailored</span>
+              <span className="text-base font-black text-emerald-700 leading-tight">{tailoredScore}</span>
+            </div>
+          </div>
+
+          {/* Delta Pill */}
+          {isImproved ? (
+            <div className="flex items-center gap-1 rounded-xl bg-emerald-600 px-2.5 py-1 text-white shadow-2xs">
+              <TrendingUp className="h-3.5 w-3.5" />
+              <span className="text-xs font-black">+{scoreDifference} pts</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 rounded-xl bg-slate-200 px-2.5 py-1 text-slate-700">
+              <span className="text-xs font-bold">Optimized</span>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+          <span className="truncate max-w-[200px] font-medium" title={resumeName}>
+            &ldquo;{resumeName}&rdquo;
+          </span>
+          <span className="rounded-md bg-emerald-100/80 text-emerald-800 font-bold px-1.5 py-0.5 text-[10px]">
+            {tailoredRank}
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-xs relative overflow-hidden">
