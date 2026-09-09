@@ -108,6 +108,13 @@ export function BuilderHeader({
           <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
           <span className="hidden sm:inline">ATS Check</span>
         </Link>
+        <Link
+          href="/tailor"
+          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors cursor-pointer"
+          title="Tailor resume for job"
+        >
+          <span className="hidden sm:inline">Tailor</span>
+        </Link>
         {session?.user && <UserMenu user={session.user} />}
       </div>
     </header>

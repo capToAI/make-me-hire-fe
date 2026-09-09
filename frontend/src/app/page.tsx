@@ -233,13 +233,20 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/ats-score"
               className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50/80 hover:bg-indigo-100 active:bg-indigo-200/50 px-3 py-1.5 text-xs sm:text-sm font-bold text-indigo-700 shadow-2xs transition-all cursor-pointer"
             >
               <Sparkles className="h-4 w-4 text-indigo-600" />
               <span>ATS Checker</span>
+            </Link>
+
+            <Link
+              href="/tailor"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:bg-slate-100 px-3 py-1.5 text-xs sm:text-sm font-semibold text-slate-700 shadow-2xs transition-all cursor-pointer"
+            >
+              <span>Tailor Resume</span>
             </Link>
 
             {isLoading ? (

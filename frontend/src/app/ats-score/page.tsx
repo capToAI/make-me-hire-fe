@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import {
   AlertCircle,
@@ -24,6 +24,7 @@ import { TailorProgressState } from "@/components/ats-score/tailor/TailorProgres
 import { ResumeTailorView } from "@/components/ats-score/tailor/ResumeTailorView";
 
 function AtsScoreContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
 
@@ -119,8 +120,8 @@ function AtsScoreContent() {
     }
   };
 
-  // 3. Handle Tailor Resume Action
-  const onStartTailoring = async () => {
+  // 3. Handle Tailor Resume Action - route to dedicated /tailor screen
+  const onStartTailoring = () => {
     if (!selectedResume) {
       setErrorMessage("Please select a resume to tailor.");
       return;
@@ -131,28 +132,15 @@ function AtsScoreContent() {
       return;
     }
 
-    setIsTailoring(true);
-    setErrorMessage(null);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-
-    try {
-      const res = await tailorResume(selectedResume.id, jobDescription.trim());
-
-      if (res.success && res.data) {
-        setTailoredResult(res.data);
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      } else {
-        setErrorMessage(
-          res.error || "Unable to complete resume tailoring. Please retry."
-        );
-      }
-    } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to connect to tailoring service";
-      setErrorMessage(msg);
-    } finally {
-      setIsTailoring(false);
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("tailor_target_resume_id", selectedResume.id);
+      sessionStorage.setItem("tailor_target_job_desc", jobDescription.trim());
+      sessionStorage.setItem("tailor_auto_start", "true");
     }
+
+    router.push(
+      `/tailor?resumeId=${encodeURIComponent(selectedResume.id)}&autoTailor=true`
+    );
   };
 
   // 4. Handle Skill Recalculation
@@ -228,7 +216,15 @@ function AtsScoreContent() {
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            <Link
+              href="/tailor"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors cursor-pointer shadow-2xs"
+            >
+              <Sparkles className="h-4 w-4 text-indigo-600" />
+              <span>Tailor Resume</span>
+            </Link>
+
             <Link
               href="/"
               className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer shadow-2xs"
