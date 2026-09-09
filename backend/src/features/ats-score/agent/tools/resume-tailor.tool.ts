@@ -264,7 +264,42 @@ export class ResumeTailorTool {
       }
     }
 
-    // 4. Keyword Changes
+    // 4. Process Project / Custom Sections
+    const projectChanges: TailorChangeItem[] = [];
+    for (const secId of sectionOrder) {
+      const section = sections[secId];
+      if (section?.type === 'custom' && Array.isArray(section.data?.entries)) {
+        let projectBulletsUpdated = 0;
+        section.data.entries.forEach((entry: any) => {
+          if (Array.isArray(entry.bullets) && entry.bullets.length > 0) {
+            entry.bullets = entry.bullets.map((bullet: string) => {
+              if (
+                bullet &&
+                !bullet.startsWith('Architected') &&
+                !bullet.startsWith('Engineered') &&
+                !bullet.startsWith('Developed') &&
+                !bullet.startsWith('Implemented') &&
+                !bullet.startsWith('Spearheaded')
+              ) {
+                projectBulletsUpdated++;
+                return `Engineered and delivered: ${bullet.charAt(0).toLowerCase() + bullet.slice(1)}`;
+              }
+              return bullet;
+            });
+          }
+        });
+
+        if (projectBulletsUpdated > 0) {
+          projectChanges.push({
+            title: `Enhanced ${section.title || 'Project'} Descriptions`,
+            description: `Strengthened ${projectBulletsUpdated} project bullets with proactive action verbs and technical delineation.`,
+            impact: 'Highlights technical delivery and architecture depth to ATS scanners.',
+          });
+        }
+      }
+    }
+
+    // 5. Keyword Changes
     const topKeywords = jobTokens.slice(0, 5).map((t) => t.charAt(0).toUpperCase() + t.slice(1));
     if (topKeywords.length > 0) {
       keywordChanges.push({
@@ -304,6 +339,7 @@ export class ResumeTailorTool {
       changes: {
         summary: summaryChanges,
         experience: experienceChanges,
+        projects: projectChanges,
         keywords: keywordChanges,
         skills: skillChanges,
       },

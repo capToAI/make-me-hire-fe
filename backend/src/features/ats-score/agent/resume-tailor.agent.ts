@@ -22,6 +22,10 @@ const changeItemSchema = z.object({
 });
 
 const resumeTailorZodSchema = z.object({
+  tailoredJobTitle: z
+    .string()
+    .optional()
+    .describe('Optimized target professional headline/job title matching the target job description seniority and role, e.g. "Senior Angular Developer | TypeScript, RxJS & NgRx"'),
   tailoredSummary: z
     .string()
     .optional()
@@ -37,12 +41,23 @@ const resumeTailorZodSchema = z.object({
     )
     .optional()
     .describe('Enhanced bullet points for work experience entries'),
+  projectBullets: z
+    .array(
+      z.object({
+        id: z.string().describe('Original project/custom entry id'),
+        heading: z.string().describe('Original project heading (must remain identical)'),
+        bullets: z.array(z.string()).describe('Enhanced bullet points emphasizing target tech stack and impact'),
+      }),
+    )
+    .optional()
+    .describe('Enhanced bullet points or descriptions for project/custom entries'),
   tailoredSkills: z
     .array(z.string())
     .describe('Optimized list of skills (containing candidate skills + user confirmed skills only)'),
   changes: z.object({
     summary: z.array(changeItemSchema).describe('Summary changes'),
     experience: z.array(changeItemSchema).describe('Experience changes'),
+    projects: z.array(changeItemSchema).optional().describe('Project changes'),
     keywords: z.array(changeItemSchema).describe('Keyword changes'),
     skills: z.array(changeItemSchema).describe('Skills changes'),
   }),
@@ -80,6 +95,8 @@ export class ResumeTailorAgent {
     atsContext: {
       matchedKeywords?: string[];
       missingKeywords?: string[];
+      matchedSkills?: string[];
+      missingSkills?: string[];
     },
     confirmedSkills: string[] = [],
     rejectedSkills: string[] = [],
@@ -114,11 +131,24 @@ export class ResumeTailorAgent {
         method: 'functionCalling',
       });
 
+      const allMatchedKeywords = Array.from(
+        new Set([
+          ...(atsContext.matchedSkills || []),
+          ...(atsContext.matchedKeywords || []),
+        ]),
+      );
+      const allMissingKeywords = Array.from(
+        new Set([
+          ...(atsContext.missingSkills || []),
+          ...(atsContext.missingKeywords || []),
+        ]),
+      );
+
       const userPrompt = buildResumeTailorUserPrompt(
         JSON.stringify(originalResumeData, null, 2),
         jobDescription,
-        atsContext.matchedKeywords || [],
-        atsContext.missingKeywords || [],
+        allMatchedKeywords,
+        allMissingKeywords,
         confirmedSkills,
       );
 
@@ -137,6 +167,20 @@ export class ResumeTailorAgent {
       const sectionOrder: string[] = Array.isArray(tailoredResumeData.sectionOrder)
         ? tailoredResumeData.sectionOrder
         : Object.keys(sections);
+
+      // 0. Merge tailoredJobTitle if available
+      let headlineChanged = false;
+      let previousHeadline = '';
+      if (result.tailoredJobTitle && result.tailoredJobTitle.trim()) {
+        for (const secId of sectionOrder) {
+          const section = sections[secId];
+          if (section?.type === 'basic' && section.data) {
+            previousHeadline = section.data.jobTitle || '';
+            section.data.jobTitle = result.tailoredJobTitle.trim();
+            headlineChanged = true;
+          }
+        }
+      }
 
       // 1. Merge summary if available
       if (result.tailoredSummary) {
@@ -163,6 +207,36 @@ export class ResumeTailorAgent {
             section.data.entries.forEach((entry: any) => {
               if (bulletsMap.has(entry.id)) {
                 entry.bullets = bulletsMap.get(entry.id)!;
+              }
+            });
+          }
+        }
+      }
+
+      // 3. Merge project / custom bullets safely matching entry IDs or headings
+      if (Array.isArray(result.projectBullets) && result.projectBullets.length > 0) {
+        const projectById = new Map<string, string[]>();
+        const projectByHeading = new Map<string, string[]>();
+
+        result.projectBullets.forEach((item) => {
+          if (Array.isArray(item.bullets) && item.bullets.length > 0) {
+            if (item.id) {
+              projectById.set(item.id, item.bullets);
+            }
+            if (item.heading) {
+              projectByHeading.set(item.heading.toLowerCase().trim(), item.bullets);
+            }
+          }
+        });
+
+        for (const secId of sectionOrder) {
+          const section = sections[secId];
+          if (section?.type === 'custom' && Array.isArray(section.data?.entries)) {
+            section.data.entries.forEach((entry: any) => {
+              if (entry.id && projectById.has(entry.id)) {
+                entry.bullets = projectById.get(entry.id)!;
+              } else if (entry.heading && projectByHeading.has(entry.heading.toLowerCase().trim())) {
+                entry.bullets = projectByHeading.get(entry.heading.toLowerCase().trim())!;
               }
             });
           }
@@ -242,11 +316,21 @@ export class ResumeTailorAgent {
         }));
       };
 
+      const summaryChanges = mapChanges(result.changes?.summary);
+      if (headlineChanged && result.tailoredJobTitle) {
+        summaryChanges.unshift({
+          title: 'Target Professional Headline Alignment',
+          description: `Aligned professional title from "${previousHeadline || 'General'}" to "${result.tailoredJobTitle.trim()}".`,
+          impact: 'Directly secures title-alignment match points (+10 pts) in ATS screening algorithms.',
+        });
+      }
+
       return {
         tailoredResumeData,
         changes: {
-          summary: mapChanges(result.changes?.summary),
+          summary: summaryChanges,
           experience: mapChanges(result.changes?.experience),
+          projects: mapChanges(result.changes?.projects),
           keywords: mapChanges(result.changes?.keywords),
           skills: mapChanges(result.changes?.skills),
         },

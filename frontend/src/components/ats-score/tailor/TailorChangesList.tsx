@@ -5,6 +5,7 @@ import {
   Briefcase,
   CheckCircle2,
   FileText,
+  FolderGit2,
   KeyRound,
   Wrench,
 } from "lucide-react";
@@ -14,16 +15,17 @@ interface TailorChangesListProps {
   changes: TailorChangesGroup;
 }
 
-type TabType = "all" | "summary" | "experience" | "keywords" | "skills";
+type TabType = "all" | "summary" | "experience" | "projects" | "keywords" | "skills";
 
 export function TailorChangesList({ changes }: TailorChangesListProps) {
   const [activeTab, setActiveTab] = useState<TabType>("all");
 
   const summaryCount = changes.summary?.length || 0;
   const experienceCount = changes.experience?.length || 0;
+  const projectsCount = changes.projects?.length || 0;
   const keywordsCount = changes.keywords?.length || 0;
   const skillsCount = changes.skills?.length || 0;
-  const totalCount = summaryCount + experienceCount + keywordsCount + skillsCount;
+  const totalCount = summaryCount + experienceCount + projectsCount + keywordsCount + skillsCount;
 
   const categories = [
     {
@@ -39,6 +41,13 @@ export function TailorChangesList({ changes }: TailorChangesListProps) {
       icon: Briefcase,
       items: changes.experience || [],
       color: "text-indigo-600 bg-indigo-50 border-indigo-200",
+    },
+    {
+      id: "projects" as const,
+      label: "Projects",
+      icon: FolderGit2,
+      items: changes.projects || [],
+      color: "text-amber-600 bg-amber-50 border-amber-200",
     },
     {
       id: "keywords" as const,
@@ -109,6 +118,19 @@ export function TailorChangesList({ changes }: TailorChangesListProps) {
           >
             Experience ({experienceCount})
           </button>
+          {projectsCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("projects")}
+              className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === "projects"
+                  ? "bg-white text-slate-900 shadow-2xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Projects ({projectsCount})
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setActiveTab("keywords")}

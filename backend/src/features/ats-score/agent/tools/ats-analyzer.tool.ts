@@ -297,15 +297,13 @@ export class AtsAnalyzerTool {
     const score = Math.max(10, Math.min(98, rawScore));
     const rank = this.getRankFromScore(score);
 
-    // Format top matched keywords (capitalized nicely)
+    // Format matched keywords (capitalized nicely)
     const matchedKeywords = Array.from(
       new Set([
         ...matchedSkills,
-        ...matchedTokens
-          .slice(0, 15)
-          .map((t) => t.charAt(0).toUpperCase() + t.slice(1)),
+        ...matchedTokens.map((t) => t.charAt(0).toUpperCase() + t.slice(1)),
       ]),
-    ).slice(0, 20);
+    ).slice(0, 50);
 
     const matchedTokensLower = new Set([
       ...matchedSkills.map((s) => s.toLowerCase().trim()),
@@ -320,15 +318,13 @@ export class AtsAnalyzerTool {
     const rawMissingKeywords = Array.from(
       new Set([
         ...sanitizedMissingSkills,
-        ...missingTokens
-          .slice(0, 15)
-          .map((t) => t.charAt(0).toUpperCase() + t.slice(1)),
+        ...missingTokens.map((t) => t.charAt(0).toUpperCase() + t.slice(1)),
       ]),
     );
 
     const missingKeywords = rawMissingKeywords
       .filter((k) => !matchedTokensLower.has(k.toLowerCase().trim()) && !isSkillCoveredByCandidate(k, resumeSkills))
-      .slice(0, 15);
+      .slice(0, 50);
 
     // Dynamic strengths
     const strengths: string[] = [];

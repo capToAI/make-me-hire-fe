@@ -324,13 +324,28 @@ export class AtsScoreService {
       },
     );
 
-    // 2. Invoke Resume Tailoring Agent
+    // 2. Invoke Resume Tailoring Agent with full matched and missing context
+    const allMatchedForTailoring = Array.from(
+      new Set([
+        ...(originalAnalysis.matchedSkills || []),
+        ...(originalAnalysis.matchedKeywords || []),
+      ]),
+    );
+    const allMissingForTailoring = Array.from(
+      new Set([
+        ...(originalAnalysis.missingSkills || []),
+        ...(originalAnalysis.missingKeywords || []),
+      ]),
+    );
+
     const tailoredAgentResult = await this.resumeTailorAgent.tailorResume(
       resume.data,
       dto.jobDescription,
       {
-        matchedKeywords: originalAnalysis.matchedKeywords,
-        missingKeywords: originalAnalysis.missingKeywords,
+        matchedKeywords: allMatchedForTailoring,
+        missingKeywords: allMissingForTailoring,
+        matchedSkills: originalAnalysis.matchedSkills,
+        missingSkills: originalAnalysis.missingSkills,
       },
       dto.confirmedSkills || [],
       dto.rejectedSkills || [],
@@ -340,12 +355,22 @@ export class AtsScoreService {
     const tailoredResumeText = this.convertResumeToStructuredText(
       tailoredAgentResult.tailoredResumeData,
     );
+
+    // Extract tailored position from basic section if updated to secure title bonus
+    let tailoredPosition = resume.position;
+    const basicSection = Object.values(
+      tailoredAgentResult.tailoredResumeData?.sections || {},
+    ).find((sec: any) => sec?.type === 'basic');
+    if ((basicSection as any)?.data?.jobTitle) {
+      tailoredPosition = (basicSection as any).data.jobTitle;
+    }
+
     const tailoredAnalysis = await this.atsCheckAgent.analyzeResume(
       tailoredResumeText,
       dto.jobDescription,
       {
         name: resume.name,
-        position: resume.position,
+        position: tailoredPosition,
       },
     );
 
@@ -370,7 +395,7 @@ export class AtsScoreService {
       suggestedSkills: tailoredAgentResult.suggestedSkills,
       resumeId: resume.id,
       resumeName: resume.name,
-      position: resume.position,
+      position: tailoredPosition,
       tailoredAt: new Date().toISOString(),
     };
   }
@@ -404,6 +429,13 @@ export class AtsScoreService {
     }
 
     resume.data = dto.tailoredData;
+    // Keep top-level position synchronized with basic section jobTitle
+    const basicSection = Object.values(dto.tailoredData?.sections || {}).find(
+      (sec: any) => sec?.type === 'basic',
+    );
+    if ((basicSection as any)?.data?.jobTitle) {
+      resume.position = (basicSection as any).data.jobTitle;
+    }
     resume.updated_at = new Date();
 
     const saved = await this.resumeRepository.save(resume);

@@ -173,6 +173,7 @@ export interface TailorChangeItem {
 export interface TailorChangesGroup {
   summary: TailorChangeItem[];
   experience: TailorChangeItem[];
+  projects?: TailorChangeItem[];
   keywords: TailorChangeItem[];
   skills: TailorChangeItem[];
 }

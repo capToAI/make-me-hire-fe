@@ -36,16 +36,16 @@ const atsAnalysisZodSchema = z.object({
     .describe('Concise summary explaining how well the resume matches the job description'),
   matchedKeywords: z
     .array(z.string())
-    .describe('Keywords found in both the resume and the job description'),
+    .describe('Exhaustive list of keywords, methodologies, and concepts found in both the resume and the job description'),
   missingKeywords: z
     .array(z.string())
-    .describe('Important keywords in the job description missing or weak in the resume'),
+    .describe('Exhaustive, comprehensive list of all important keywords, methodologies, and domain concepts in the job description missing or weak in the resume'),
   matchedSkills: z
     .array(z.string())
     .describe('Specific technical and professional skills matched between resume and job description'),
   missingSkills: z
     .array(z.string())
-    .describe('Requested skills in the job description that are missing from the resume'),
+    .describe('Exhaustive, comprehensive list of all requested technical skills, frameworks, tools, and platforms in the job description missing from the resume'),
   strengths: z
     .array(z.string())
     .describe('2 to 4 bullet points highlighting resume strengths for this job'),

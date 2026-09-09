@@ -98,6 +98,9 @@ export class TailoredChangesGroupDto {
 
   @ApiProperty({ description: 'Skill presentation and approved addition changes' })
   skills!: TailorChangeItem[];
+
+  @ApiPropertyOptional({ description: 'Projects and portfolio enhancements' })
+  projects?: TailorChangeItem[];
 }
 
 export class TailoredResumeResponseDto {
