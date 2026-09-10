@@ -15,7 +15,11 @@ import {
   Sparkles,
 } from "lucide-react";
 import { checkAtsScore, fetchUserResumes, tailorResume } from "@/lib/api";
-import type { AtsScoreData, ResumeListItem, TailoredResumeResponse } from "@/lib/types";
+import type {
+  AtsScoreData,
+  ResumeListItem,
+  TailoredResumeResponse,
+} from "@/lib/types";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { ResumeSelector } from "@/components/ats-score/ResumeSelector";
 import { JobDescriptionInput } from "@/components/ats-score/JobDescriptionInput";
@@ -29,7 +33,9 @@ function AtsScoreContent() {
   const { data: session, status } = useSession();
 
   const [resumes, setResumes] = useState<ResumeListItem[]>([]);
-  const [selectedResume, setSelectedResume] = useState<ResumeListItem | null>(null);
+  const [selectedResume, setSelectedResume] = useState<ResumeListItem | null>(
+    null,
+  );
   const [jobDescription, setJobDescription] = useState("");
   const [isLoadingResumes, setIsLoadingResumes] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -37,11 +43,16 @@ function AtsScoreContent() {
   const [atsResult, setAtsResult] = useState<AtsScoreData | null>(null);
   const [isTailoring, setIsTailoring] = useState(false);
   const [isRecalculating, setIsRecalculating] = useState(false);
-  const [tailoredResult, setTailoredResult] = useState<TailoredResumeResponse | null>(null);
+  const [tailoredResult, setTailoredResult] =
+    useState<TailoredResumeResponse | null>(null);
 
   // Track last evaluated inputs to toggle "Checked" state
-  const [lastAnalyzedResumeId, setLastAnalyzedResumeId] = useState<string | null>(null);
-  const [lastAnalyzedJobDesc, setLastAnalyzedJobDesc] = useState<string | null>(null);
+  const [lastAnalyzedResumeId, setLastAnalyzedResumeId] = useState<
+    string | null
+  >(null);
+  const [lastAnalyzedJobDesc, setLastAnalyzedJobDesc] = useState<string | null>(
+    null,
+  );
 
   const isAuthenticated = status === "authenticated";
   const isLoadingAuth = status === "loading";
@@ -92,7 +103,7 @@ function AtsScoreContent() {
 
     if (!jobDescription.trim() || jobDescription.trim().length < 20) {
       setErrorMessage(
-        "Please enter a complete job description (minimum 20 characters) for an accurate ATS evaluation."
+        "Please enter a complete job description (minimum 20 characters) for an accurate ATS evaluation.",
       );
       return;
     }
@@ -108,7 +119,7 @@ function AtsScoreContent() {
         setLastAnalyzedJobDesc(jobDescription.trim());
       } else {
         setErrorMessage(
-          res.error || "Unable to complete ATS analysis. Please retry."
+          res.error || "Unable to complete ATS analysis. Please retry.",
         );
       }
     } catch (err: unknown) {
@@ -139,14 +150,14 @@ function AtsScoreContent() {
     }
 
     router.push(
-      `/tailor?resumeId=${encodeURIComponent(selectedResume.id)}&autoTailor=true`
+      `/tailor?resumeId=${encodeURIComponent(selectedResume.id)}&autoTailor=true`,
     );
   };
 
   // 4. Handle Skill Recalculation
   const onRecalculateWithSkills = async (
     confirmedSkills: string[],
-    rejectedSkills: string[]
+    rejectedSkills: string[],
   ) => {
     if (!selectedResume || !jobDescription.trim()) return;
 
@@ -158,19 +169,21 @@ function AtsScoreContent() {
         selectedResume.id,
         jobDescription.trim(),
         confirmedSkills,
-        rejectedSkills
+        rejectedSkills,
       );
 
       if (res.success && res.data) {
         setTailoredResult(res.data);
       } else {
         setErrorMessage(
-          res.error || "Unable to update tailored resume with approved skills."
+          res.error || "Unable to update tailored resume with approved skills.",
         );
       }
     } catch (err: unknown) {
       const msg =
-        err instanceof Error ? err.message : "Failed to recalculate tailored score";
+        err instanceof Error
+          ? err.message
+          : "Failed to recalculate tailored score";
       setErrorMessage(msg);
     } finally {
       setIsRecalculating(false);
@@ -266,7 +279,9 @@ function AtsScoreContent() {
               Check your ATS Score
             </h1>
             <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-              Sign in with your Google account to pick a resume, paste a job description, and see how it scores and which keywords it is missing.
+              Sign in with your Google account to pick a resume, paste a job
+              description, and see how it scores and which keywords it is
+              missing.
             </p>
             <div className="mt-6">
               <button
@@ -305,7 +320,8 @@ function AtsScoreContent() {
                 </h1>
               </div>
               <p className="text-xs sm:text-sm text-slate-500">
-                Pick a resume, paste a job description, and see how it scores and which keywords it is missing. Your resume is not changed.
+                Pick a resume, paste a job description, and see how it scores
+                and which keywords it is missing. Your resume is not changed.
               </p>
             </div>
 
@@ -394,7 +410,8 @@ function AtsScoreContent() {
                       Analyzing ATS Compatibility...
                     </h3>
                     <p className="mt-1.5 text-xs text-slate-400 max-w-xs leading-relaxed">
-                      Evaluating your resume against keywords, skills, and requirements in the job description.
+                      Evaluating your resume against keywords, skills, and
+                      requirements in the job description.
                     </p>
                   </div>
                 ) : atsResult ? (
@@ -413,7 +430,8 @@ function AtsScoreContent() {
                       Your score will appear here
                     </h3>
                     <p className="mt-1.5 text-xs text-slate-400 max-w-xs leading-relaxed">
-                      Paste a job description on the left and hit Check ATS Score to see your match and missing keywords.
+                      Paste a job description on the left and hit Check ATS
+                      Score to see your match and missing keywords.
                     </p>
                   </div>
                 )}

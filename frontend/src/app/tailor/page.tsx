@@ -13,11 +13,7 @@ import {
   RefreshCw,
   Sparkles,
 } from "lucide-react";
-import {
-  fetchResumeById,
-  fetchUserResumes,
-  tailorResume,
-} from "@/lib/api";
+import { fetchResumeById, fetchUserResumes, tailorResume } from "@/lib/api";
 import type {
   ResumeListItem,
   ResumeState,
@@ -36,15 +32,20 @@ function TailorPageContent() {
   const { data: session, status } = useSession();
 
   const [resumes, setResumes] = useState<ResumeListItem[]>([]);
-  const [selectedResume, setSelectedResume] = useState<ResumeListItem | null>(null);
-  const [baseResumeData, setBaseResumeData] = useState<ResumeState | null>(null);
+  const [selectedResume, setSelectedResume] = useState<ResumeListItem | null>(
+    null,
+  );
+  const [baseResumeData, setBaseResumeData] = useState<ResumeState | null>(
+    null,
+  );
   const [jobDescription, setJobDescription] = useState("");
   const [isLoadingResumes, setIsLoadingResumes] = useState(false);
   const [isLoadingBaseResume, setIsLoadingBaseResume] = useState(false);
   const [isTailoring, setIsTailoring] = useState(false);
   const [isRecalculating, setIsRecalculating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [tailoredResult, setTailoredResult] = useState<TailoredResumeResponse | null>(null);
+  const [tailoredResult, setTailoredResult] =
+    useState<TailoredResumeResponse | null>(null);
 
   const autoTailoredRef = useRef(false);
 
@@ -83,7 +84,8 @@ function TailorPageContent() {
 
           let activeResume: ResumeListItem | null = null;
           if (targetResumeId) {
-            activeResume = res.data.find((r) => r.id === targetResumeId) || null;
+            activeResume =
+              res.data.find((r) => r.id === targetResumeId) || null;
           }
           if (!activeResume && res.data.length > 0) {
             activeResume = res.data[0];
@@ -160,12 +162,14 @@ function TailorPageContent() {
         window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
         setErrorMessage(
-          res.error || "Unable to complete resume tailoring. Please retry."
+          res.error || "Unable to complete resume tailoring. Please retry.",
         );
       }
     } catch (err: unknown) {
       const msg =
-        err instanceof Error ? err.message : "Failed to connect to tailoring service";
+        err instanceof Error
+          ? err.message
+          : "Failed to connect to tailoring service";
       setErrorMessage(msg);
     } finally {
       setIsTailoring(false);
@@ -179,7 +183,7 @@ function TailorPageContent() {
     }
     if (!jobDescription.trim() || jobDescription.trim().length < 20) {
       setErrorMessage(
-        "Please enter a complete job description (minimum 20 characters) for accurate resume tailoring."
+        "Please enter a complete job description (minimum 20 characters) for accurate resume tailoring.",
       );
       return;
     }
@@ -189,7 +193,7 @@ function TailorPageContent() {
   // 4. Handle Skill Recalculation
   const handleRecalculateWithSkills = async (
     confirmedSkills: string[],
-    rejectedSkills: string[]
+    rejectedSkills: string[],
   ) => {
     if (!selectedResume || !jobDescription.trim()) return;
 
@@ -201,19 +205,21 @@ function TailorPageContent() {
         selectedResume.id,
         jobDescription.trim(),
         confirmedSkills,
-        rejectedSkills
+        rejectedSkills,
       );
 
       if (res.success && res.data) {
         setTailoredResult(res.data);
       } else {
         setErrorMessage(
-          res.error || "Unable to update tailored resume with approved skills."
+          res.error || "Unable to update tailored resume with approved skills.",
         );
       }
     } catch (err: unknown) {
       const msg =
-        err instanceof Error ? err.message : "Failed to recalculate tailored score";
+        err instanceof Error
+          ? err.message
+          : "Failed to recalculate tailored score";
       setErrorMessage(msg);
     } finally {
       setIsRecalculating(false);
@@ -302,7 +308,9 @@ function TailorPageContent() {
               Tailor Resume for Job
             </h1>
             <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-              Sign in with your Google account to select your saved resumes and tailor your qualifications precisely around any target job description.
+              Sign in with your Google account to select your saved resumes and
+              tailor your qualifications precisely around any target job
+              description.
             </p>
             <div className="mt-6">
               <button
@@ -341,7 +349,8 @@ function TailorPageContent() {
                 </h1>
               </div>
               <p className="text-xs sm:text-sm text-slate-500">
-                Paste a job description to see your ATS match score and the keywords you are missing, then tailor your resume around them.
+                Paste a job description to see your ATS match score and the
+                keywords you are missing, then tailor your resume around them.
               </p>
             </div>
 
@@ -387,7 +396,8 @@ function TailorPageContent() {
                     disabled={isTailoring}
                   />
                   <p className="text-[11px] text-slate-500">
-                    We score your resume against this job first. Tailoring is the next step, so nothing is rewritten yet.
+                    We score your resume against this job first. Tailoring is
+                    the next step, so nothing is rewritten yet.
                   </p>
                 </div>
 

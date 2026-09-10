@@ -92,8 +92,22 @@ Key variables:
 - `OPENAI_API_KEY`: Required for the resume extraction AI agent.
 - `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`: NextAuth authentication credentials.
 
-### 2. Start All Services
-Build and start PostgreSQL, Backend, and Frontend:
+### 2. Start Services in Development Mode (Live Hot Reloading)
+For active development with instant code changes and hot reload:
+```bash
+npm run docker:dev
+# or directly:
+docker compose -f docker-compose.dev.yml up --build
+```
+To stop development services:
+```bash
+npm run docker:dev:down
+# or directly:
+docker compose -f docker-compose.dev.yml down
+```
+
+### 3. Start Services in Production Mode
+Build and run optimized production images:
 ```bash
 npm run docker:up
 # or directly:
