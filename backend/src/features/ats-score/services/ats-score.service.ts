@@ -159,6 +159,26 @@ export class AtsScoreService {
           break;
         }
 
+        case 'projects': {
+          const entries: any[] = Array.isArray(secData.entries) ? secData.entries : [];
+          if (entries.length > 0) {
+            const projectTexts = entries.map((entry) => {
+              const bullets: string[] = Array.isArray(entry.bullets)
+                ? entry.bullets.filter(Boolean)
+                : [];
+              const tech =
+                Array.isArray(entry.technologies) && entry.technologies.length > 0
+                  ? `Technologies: ${entry.technologies.join(', ')}`
+                  : '';
+              const link = entry.link ? `Link: ${entry.link}` : '';
+              const header = [entry.name, tech, link].filter(Boolean).join(' | ');
+              return `${header}\n` + bullets.map((b) => `- ${b}`).join('\n');
+            });
+            parts.push(`### Projects\n${projectTexts.join('\n\n')}`);
+          }
+          break;
+        }
+
         case 'education': {
           const entries: any[] = Array.isArray(secData.entries) ? secData.entries : [];
           if (entries.length > 0) {

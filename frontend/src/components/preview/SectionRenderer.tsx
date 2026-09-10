@@ -4,6 +4,7 @@ import type {
   SummaryData,
   SkillsData,
   ExperienceData,
+  ProjectsData,
   EducationData,
   CertificationsData,
   LanguagesData,
@@ -13,6 +14,7 @@ import { BasicPreview } from "./BasicPreview";
 import { SummaryPreview } from "./SummaryPreview";
 import { SkillsPreview } from "./SkillsPreview";
 import { ExperiencePreview } from "./ExperiencePreview";
+import { ProjectsPreview } from "./ProjectsPreview";
 import { EducationPreview } from "./EducationPreview";
 import { CertificationsPreview } from "./CertificationsPreview";
 import { LanguagesPreview } from "./LanguagesPreview";
@@ -35,6 +37,13 @@ export function SectionRenderer({ section }: { section: Section }) {
         <ExperiencePreview
           title={section.title}
           data={section.data as ExperienceData}
+        />
+      );
+    case "projects":
+      return (
+        <ProjectsPreview
+          title={section.title}
+          data={section.data as ProjectsData}
         />
       );
     case "education":

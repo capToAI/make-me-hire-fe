@@ -15,6 +15,7 @@ export enum SectionTypeEnum {
   SUMMARY = 'summary',
   SKILLS = 'skills',
   EXPERIENCE = 'experience',
+  PROJECTS = 'projects',
   EDUCATION = 'education',
   CERTIFICATIONS = 'certifications',
   LANGUAGES = 'languages',
@@ -231,11 +232,45 @@ export class CustomDataDto {
   entries: CustomEntryDto[];
 }
 
+export class ProjectEntryDto {
+  @ApiProperty({ description: 'Unique identifier for project entry' })
+  @IsString()
+  id: string;
+
+  @ApiProperty({ description: 'Project name / title' })
+  @IsString()
+  name: string;
+
+  @ApiPropertyOptional({ description: 'Project link (GitHub / Demo URL)' })
+  @IsOptional()
+  @IsString()
+  link?: string;
+
+  @ApiProperty({ description: 'Achievement and responsibility bullet points', type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  bullets: string[];
+
+  @ApiProperty({ description: 'Technologies used in project', type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  technologies: string[];
+}
+
+export class ProjectsDataDto {
+  @ApiProperty({ description: 'List of project entries', type: [ProjectEntryDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProjectEntryDto)
+  entries: ProjectEntryDto[];
+}
+
 export type SectionDataPayloadDto =
   | BasicDataDto
   | SummaryDataDto
   | SkillsDataDto
   | ExperienceDataDto
+  | ProjectsDataDto
   | EducationDataDto
   | CertificationsDataDto
   | LanguagesDataDto

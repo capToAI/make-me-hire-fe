@@ -16,6 +16,7 @@ import {
   Trash2,
   User,
   Wrench,
+  FolderGit2,
 } from "lucide-react";
 
 import { BasicFields } from "@/components/fields/BasicFields";
@@ -23,6 +24,7 @@ import { CertificationsFields } from "@/components/fields/CertificationsFields";
 import { CustomFields } from "@/components/fields/CustomFields";
 import { EducationFields } from "@/components/fields/EducationFields";
 import { ExperienceFields } from "@/components/fields/ExperienceFields";
+import { ProjectsFields } from "@/components/fields/ProjectsFields";
 import { LanguagesFields } from "@/components/fields/LanguagesFields";
 import { SkillsFields } from "@/components/fields/SkillsFields";
 import { SummaryFields } from "@/components/fields/SummaryFields";
@@ -33,6 +35,7 @@ import type {
   CustomData,
   EducationData,
   ExperienceData,
+  ProjectsData,
   LanguagesData,
   Section,
   SkillsData,
@@ -65,6 +68,8 @@ export function SectionCard({
         return <FileText className="h-4 w-4 text-emerald-600 shrink-0" />;
       case "experience":
         return <Briefcase className="h-4 w-4 text-blue-600 shrink-0" />;
+      case "projects":
+        return <FolderGit2 className="h-4 w-4 text-purple-600 shrink-0" />;
       case "education":
         return <GraduationCap className="h-4 w-4 text-amber-600 shrink-0" />;
       case "skills":
@@ -210,6 +215,13 @@ export function SectionCard({
           <ExperienceFields
             sectionId={section.id}
             data={section.data as ExperienceData}
+            dispatch={dispatch}
+          />
+        )}
+        {section.type === "projects" && (
+          <ProjectsFields
+            sectionId={section.id}
+            data={section.data as ProjectsData}
             dispatch={dispatch}
           />
         )}

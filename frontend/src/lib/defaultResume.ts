@@ -6,6 +6,7 @@ import type {
   SummaryData,
   SkillsData,
   ExperienceData,
+  ProjectsData,
   EducationData,
   CertificationsData,
   LanguagesData,
@@ -16,6 +17,7 @@ export function createDefaultResume(): ResumeState {
   const summaryId = makeId("section");
   const skillsId = makeId("section");
   const experienceId = makeId("section");
+  const projectsId = makeId("section");
   const educationId = makeId("section");
   const certificationsId = makeId("section");
   const languagesId = makeId("section");
@@ -70,6 +72,24 @@ export function createDefaultResume(): ResumeState {
         },
       ],
     } satisfies ExperienceData,
+  };
+
+  const projects: Section = {
+    id: projectsId,
+    type: "projects",
+    title: "Projects",
+    visible: true,
+    data: {
+      entries: [
+        {
+          id: makeId("entry"),
+          name: "",
+          link: "",
+          bullets: [],
+          technologies: [],
+        },
+      ],
+    } satisfies ProjectsData,
   };
 
   const education: Section = {
@@ -130,6 +150,7 @@ export function createDefaultResume(): ResumeState {
       summaryId,
       skillsId,
       experienceId,
+      projectsId,
       educationId,
       certificationsId,
       languagesId,
@@ -139,6 +160,7 @@ export function createDefaultResume(): ResumeState {
       [summaryId]: summary,
       [skillsId]: skills,
       [experienceId]: experience,
+      [projectsId]: projects,
       [educationId]: education,
       [certificationsId]: certifications,
       [languagesId]: languages,

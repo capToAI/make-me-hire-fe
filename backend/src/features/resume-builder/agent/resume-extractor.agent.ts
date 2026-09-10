@@ -80,6 +80,18 @@ const extractedResumeZodSchema = z.object({
       }),
     )
     .optional(),
+  projects: z
+    .array(
+      z.object({
+        name: z.string().describe('Project name or title (e.g., "SOUTHSTREAM - ASSET TRACE (ITALI)")'),
+        link: z.string().optional().describe('Project link (GitHub URL, live demo, or empty string)'),
+        bullets: z.array(z.string()).describe('Bullet points describing the project architecture and features'),
+        technologies: z
+          .array(z.string())
+          .describe('Technologies and tools used (e.g. ["Angular", "HTML", "CSS", "Leaflet Map"])'),
+      }),
+    )
+    .optional(),
   custom: z
     .array(
       z.object({
@@ -98,6 +110,8 @@ const extractedResumeZodSchema = z.object({
 });
 
 type ExtractedResumeData = z.infer<typeof extractedResumeZodSchema>;
+
+const cleanStr = (s?: string): string => (s ? s.replace(/\s+/g, ' ').trim() : '');
 
 /**
  * LangChain-powered Resume Extractor Agent.
@@ -151,7 +165,6 @@ export class ResumeExtractorAgent {
    * @returns {ResumeStateDto}
    */
   private transformToResumeState(data: ExtractedResumeData): ResumeStateDto {
-    const cleanStr = (s?: string) => (s ? s.replace(/\s+/g, ' ').trim() : '');
     const sections: Record<string, SectionDto> = {};
     const sectionOrder: string[] = [];
 
@@ -307,13 +320,90 @@ export class ResumeExtractorAgent {
       sectionOrder.push(id);
     }
 
+    // Projects
+    let extractedProjects = data.projects || [];
+
+    // Fallback: If no projects extracted directly, but data.custom contains project data
+    if (extractedProjects.length === 0 && data.custom && data.custom.length > 0) {
+      const projectCustomEntries: typeof extractedProjects = [];
+      const remainingCustomEntries: typeof data.custom = [];
+
+      for (const entry of data.custom) {
+        const headingLower = (entry.heading || '').toLowerCase();
+        if (headingLower.includes('project')) {
+          if (entry.bullets && entry.bullets.length > 0) {
+            for (const bullet of entry.bullets) {
+              const colonIdx = bullet.indexOf(':');
+              if (colonIdx > 0 && colonIdx < 80) {
+                const name = bullet.slice(0, colonIdx).trim();
+                const desc = bullet.slice(colonIdx + 1).trim();
+                projectCustomEntries.push({
+                  name,
+                  link: '',
+                  bullets: [desc],
+                  technologies: [],
+                });
+              } else {
+                projectCustomEntries.push({
+                  name: entry.heading,
+                  link: '',
+                  bullets: [bullet],
+                  technologies: [],
+                });
+              }
+            }
+          } else {
+            projectCustomEntries.push({
+              name: entry.heading,
+              link: '',
+              bullets: [],
+              technologies: [],
+            });
+          }
+        } else {
+          remainingCustomEntries.push(entry);
+        }
+      }
+
+      if (projectCustomEntries.length > 0) {
+        extractedProjects = projectCustomEntries;
+        data.custom = remainingCustomEntries;
+      }
+    }
+
+    if (extractedProjects.length > 0) {
+      const validProjects = extractedProjects.filter(
+        (entry) => cleanStr(entry.name) || (entry.bullets && entry.bullets.length > 0),
+      );
+
+      if (validProjects.length > 0) {
+        const id = makeId('section');
+        sections[id] = {
+          id,
+          type: SectionTypeEnum.PROJECTS,
+          title: 'Projects',
+          visible: true,
+          data: {
+            entries: validProjects.map((entry) => ({
+              id: makeId('entry'),
+              name: cleanStr(entry.name),
+              link: cleanStr(entry.link),
+              bullets: (entry.bullets || []).map((b) => cleanStr(b)).filter((b) => b.length > 0),
+              technologies: (entry.technologies || []).map((t) => cleanStr(t)).filter((t) => t.length > 0),
+            })),
+          },
+        };
+        sectionOrder.push(id);
+      }
+    }
+
     // Custom
     if (data.custom && data.custom.length > 0) {
       const id = makeId('section');
       sections[id] = {
         id,
         type: SectionTypeEnum.CUSTOM,
-        title: 'Projects & Activities',
+        title: 'Custom Section',
         visible: true,
         data: {
           entries: data.custom.map((entry) => ({
@@ -407,6 +497,71 @@ export class ResumeExtractorAgent {
           },
         };
         sectionOrder.push(summaryId);
+      }
+    }
+
+    // Heuristic extraction for Projects if present
+    const projectIdx = lines.findIndex((l) => /^projects?$/i.test(l.trim()));
+    if (projectIdx !== -1) {
+      const projectEntries: { name: string; link: string; bullets: string[]; technologies: string[] }[] = [];
+      let currentProj: { name: string; link: string; bullets: string[]; technologies: string[] } | null = null;
+
+      for (let i = projectIdx + 1; i < lines.length; i++) {
+        const line = lines[i];
+        if (/^(education|work experience|experience|skills|certifications|languages|soft skills)$/i.test(line)) {
+          break;
+        }
+
+        if (/^technologies:\s*/i.test(line)) {
+          const rawTech = line.replace(/^technologies:\s*/i, '');
+          const techs = rawTech.split(/[,|]/).map((t) => t.trim()).filter((t) => t.length > 0);
+          if (currentProj) {
+            currentProj.technologies.push(...techs);
+          }
+        } else if (line.startsWith('-') || line.startsWith('•') || line.startsWith('*')) {
+          const bullet = line.replace(/^[-•*]\s*/, '').trim();
+          if (bullet.length > 0) {
+            if (currentProj) {
+              currentProj.bullets.push(bullet);
+            }
+          }
+        } else if (line.length > 0 && line.length < 80) {
+          if (currentProj) {
+            projectEntries.push(currentProj);
+          }
+          currentProj = {
+            name: line,
+            link: '',
+            bullets: [],
+            technologies: [],
+          };
+        } else if (currentProj && line.length >= 80) {
+          currentProj.bullets.push(line);
+        }
+      }
+
+      if (currentProj) {
+        projectEntries.push(currentProj);
+      }
+
+      if (projectEntries.length > 0) {
+        const projId = makeId('section');
+        sections[projId] = {
+          id: projId,
+          type: SectionTypeEnum.PROJECTS,
+          title: 'Projects',
+          visible: true,
+          data: {
+            entries: projectEntries.map((p) => ({
+              id: makeId('entry'),
+              name: cleanStr(p.name),
+              link: cleanStr(p.link),
+              bullets: p.bullets.map((b: string) => cleanStr(b)).filter((b: string) => b.length > 0),
+              technologies: p.technologies.map((t: string) => cleanStr(t)).filter((t: string) => t.length > 0),
+            })),
+          },
+        };
+        sectionOrder.push(projId);
       }
     }
 

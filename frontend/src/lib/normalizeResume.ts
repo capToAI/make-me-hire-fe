@@ -8,6 +8,8 @@ import type {
   SummaryData,
   SkillsData,
   ExperienceData,
+  ProjectsData,
+  ProjectEntry,
   EducationData,
   CertificationsData,
   LanguagesData,
@@ -42,8 +44,8 @@ export function normalizeResumeState(raw: unknown): ResumeState {
     if (!rawSec || typeof rawSec !== "object") continue;
 
     const sectionId = rawSec.id || id || makeId("section");
-    const type = (rawSec.type || "custom") as SectionType;
-    const title = str(rawSec.title) || getFallbackTitle(type);
+    let type = (rawSec.type || "custom") as SectionType;
+    let title = str(rawSec.title) || getFallbackTitle(type);
     const visible = typeof rawSec.visible === "boolean" ? rawSec.visible : true;
     const rawData = (rawSec.data && typeof rawSec.data === "object") ? rawSec.data : {};
 
@@ -94,6 +96,22 @@ export function normalizeResumeState(raw: unknown): ResumeState {
         };
         break;
       }
+      case "projects": {
+        const d = rawData as Partial<ProjectsData>;
+        const rawEntries = arr<Record<string, unknown>>(d.entries);
+        normalizedData = {
+          entries: rawEntries.map((e) => ({
+            id: str(e.id) || makeId("entry"),
+            name: str(e.name),
+            link: str(e.link),
+            bullets: arr<string>(e.bullets).map((b) => str(b)),
+            technologies: arr<string>(e.technologies)
+              .map((t) => str(t))
+              .filter(Boolean),
+          })),
+        };
+        break;
+      }
       case "education": {
         const d = rawData as Partial<EducationData>;
         const rawEntries = arr<Record<string, unknown>>(d.entries);
@@ -138,16 +156,123 @@ export function normalizeResumeState(raw: unknown): ResumeState {
       default: {
         const d = rawData as Partial<CustomData>;
         const rawEntries = arr<Record<string, unknown>>(d.entries);
-        normalizedData = {
-          entries: rawEntries.map((e) => ({
-            id: str(e.id) || makeId("entry"),
-            heading: str(e.heading),
-            subheading: str(e.subheading),
-            start: str(e.start),
-            end: str(e.end),
-            bullets: arr<string>(e.bullets).map((b) => str(b)),
-          })),
-        };
+        const lowerTitle = title.toLowerCase();
+        const hasProjectInTitle = lowerTitle.includes("project");
+        const hasProjectInEntries = rawEntries.some((e) => {
+          const h = str(e.heading).toLowerCase();
+          const sub = str(e.subheading).toLowerCase();
+          return h.includes("project") || sub.includes("project");
+        });
+
+        if (hasProjectInTitle || hasProjectInEntries) {
+          type = "projects";
+          title = "Projects";
+          const convertedEntries: ProjectEntry[] = [];
+
+          for (const e of rawEntries) {
+            const h = str(e.heading);
+            const sub = str(e.subheading);
+            const entryBullets = arr<string>(e.bullets).map(str).filter(Boolean);
+
+            if (/^projects?$/i.test(h.trim()) || h.trim() === "") {
+              for (const bullet of entryBullets) {
+                const colonIdx = bullet.indexOf(":");
+                if (colonIdx > 0 && colonIdx < 80) {
+                  const projName = bullet.slice(0, colonIdx).trim();
+                  const desc = bullet.slice(colonIdx + 1).trim();
+
+                  let extractedTechs: string[] = [];
+                  const techMatch = desc.match(/technologies:\s*([^.\n]+)/i);
+                  if (techMatch) {
+                    extractedTechs = techMatch[1]
+                      .split(/[,|]/)
+                      .map((t) => t.trim())
+                      .filter(Boolean);
+                  }
+
+                  const sentences = desc
+                    .replace(/technologies:\s*[^.\n]+(\.|\n|$)/i, "")
+                    .split(/(?<=\.)\s+(?=[A-Z])/)
+                    .map((s) => s.trim())
+                    .filter(Boolean);
+
+                  convertedEntries.push({
+                    id: makeId("entry"),
+                    name: projName,
+                    link: "",
+                    bullets: sentences.length > 0 ? sentences : [desc],
+                    technologies: extractedTechs,
+                  });
+                } else {
+                  convertedEntries.push({
+                    id: makeId("entry"),
+                    name: bullet.slice(0, 50),
+                    link: "",
+                    bullets: [bullet],
+                    technologies: [],
+                  });
+                }
+              }
+            } else {
+              let extractedTechs: string[] = [];
+              if (/technologies/i.test(sub)) {
+                extractedTechs = sub
+                  .replace(/^technologies:\s*/i, "")
+                  .split(/[,|]/)
+                  .map((t) => t.trim())
+                  .filter(Boolean);
+              }
+
+              const cleanedBullets: string[] = [];
+              for (const b of entryBullets) {
+                if (/^technologies:\s*/i.test(b)) {
+                  const techs = b
+                    .replace(/^technologies:\s*/i, "")
+                    .split(/[,|]/)
+                    .map((t) => t.trim())
+                    .filter(Boolean);
+                  extractedTechs.push(...techs);
+                } else {
+                  cleanedBullets.push(b);
+                }
+              }
+
+              convertedEntries.push({
+                id: str(e.id) || makeId("entry"),
+                name: h,
+                link: "",
+                bullets: cleanedBullets,
+                technologies: Array.from(new Set(extractedTechs)),
+              });
+            }
+          }
+
+          normalizedData = {
+            entries:
+              convertedEntries.length > 0
+                ? convertedEntries
+                : [
+                    {
+                      id: makeId("entry"),
+                      name: "",
+                      link: "",
+                      bullets: [""],
+                      technologies: [],
+                    },
+                  ],
+          } as ProjectsData;
+        } else {
+          normalizedData = {
+            entries: rawEntries.map((e) => ({
+              id: str(e.id) || makeId("entry"),
+              heading: str(e.heading),
+              subheading: str(e.subheading),
+              start: str(e.start),
+              end: str(e.end),
+              bullets: arr<string>(e.bullets).map((b) => str(b)),
+            })),
+          };
+        }
         break;
       }
     }
@@ -159,6 +284,26 @@ export function normalizeResumeState(raw: unknown): ResumeState {
       visible,
       data: normalizedData,
     };
+  }
+
+  // Deduplicate: If there are multiple 'projects' sections (e.g. a converted custom section and an empty default section),
+  // retain only the populated one.
+  const projectSectionIds = Object.keys(normalizedSections).filter(
+    (id) => normalizedSections[id].type === "projects"
+  );
+  if (projectSectionIds.length > 1) {
+    const populatedId = projectSectionIds.find((id) => {
+      const sec = normalizedSections[id];
+      const d = sec.data as ProjectsData;
+      return d.entries && d.entries.some((e) => e.name || (e.bullets && e.bullets.length > 0));
+    });
+    if (populatedId) {
+      for (const id of projectSectionIds) {
+        if (id !== populatedId) {
+          delete normalizedSections[id];
+        }
+      }
+    }
   }
 
   // 2. Determine Section Order based on raw input or existing IDs
@@ -207,6 +352,8 @@ function getFallbackTitle(type: SectionType): string {
       return "Skills";
     case "experience":
       return "Experience";
+    case "projects":
+      return "Projects";
     case "education":
       return "Education";
     case "certifications":

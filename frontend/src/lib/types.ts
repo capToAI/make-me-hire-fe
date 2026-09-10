@@ -3,6 +3,7 @@ export type SectionType =
   | "summary"
   | "skills"
   | "experience"
+  | "projects"
   | "education"
   | "certifications"
   | "languages"
@@ -39,6 +40,18 @@ export interface ExperienceEntry {
 
 export interface ExperienceData {
   entries: ExperienceEntry[];
+}
+
+export interface ProjectEntry {
+  id: string;
+  name: string;
+  link?: string;
+  bullets: string[];
+  technologies: string[];
+}
+
+export interface ProjectsData {
+  entries: ProjectEntry[];
 }
 
 export interface EducationEntry {
@@ -93,6 +106,7 @@ export type SectionData =
   | SummaryData
   | SkillsData
   | ExperienceData
+  | ProjectsData
   | EducationData
   | CertificationsData
   | LanguagesData
