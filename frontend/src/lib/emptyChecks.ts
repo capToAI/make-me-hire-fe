@@ -4,11 +4,13 @@ import type {
   SummaryData,
   SkillsData,
   ExperienceData,
+  ProjectsData,
   EducationData,
   CertificationsData,
   LanguagesData,
   CustomData,
   ExperienceEntry,
+  ProjectEntry,
   EducationEntry,
   CertificationEntry,
   LanguageEntry,
@@ -23,6 +25,15 @@ export function isExperienceEntryEmpty(entry: ExperienceEntry): boolean {
     blank(entry.role) &&
     blank(entry.start) &&
     blank(entry.end) &&
+    entry.bullets.every(blank)
+  );
+}
+
+export function isProjectEntryEmpty(entry: ProjectEntry): boolean {
+  return (
+    blank(entry.name) &&
+    blank(entry.link) &&
+    entry.technologies.every(blank) &&
     entry.bullets.every(blank)
   );
 }
@@ -80,6 +91,10 @@ export function sectionHasContent(section: Section): boolean {
     case "experience":
       return (section.data as ExperienceData).entries.some(
         (e) => !isExperienceEntryEmpty(e)
+      );
+    case "projects":
+      return (section.data as ProjectsData).entries.some(
+        (e) => !isProjectEntryEmpty(e)
       );
     case "education":
       return (section.data as EducationData).entries.some(

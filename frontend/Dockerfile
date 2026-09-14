@@ -14,6 +14,13 @@ COPY frontend/package.json ./frontend/
 COPY backend/package.json ./backend/
 RUN npm ci --workspace=frontend --maxsockets=3 --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 --no-audit --no-fund
 
+# Development stage for hot reloading
+FROM deps AS dev
+WORKDIR /app
+ENV NODE_ENV=development
+ENV HOSTNAME="0.0.0.0"
+EXPOSE 3000
+CMD ["npm", "run", "dev", "--workspace=frontend"]
 
 # Rebuild the source code only when needed
 FROM base AS builder

@@ -24,6 +24,12 @@ COPY frontend/package.json ./frontend/
 COPY backend/package.json ./backend/
 RUN npm ci --workspace=backend --maxsockets=3 --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 --no-audit --no-fund
 
+# Development stage for watch mode
+FROM deps AS dev
+WORKDIR /app
+ENV NODE_ENV=development
+EXPOSE 3001
+CMD ["npm", "run", "start:dev", "--workspace=backend"]
 
 # Build the NestJS application
 FROM base AS builder

@@ -33,6 +33,9 @@ export const sectionClassifierTool: DynamicStructuredTool<any, any, any, any> =
     if (lower.includes('experience') || lower.includes('employment') || lower.includes('work') || lower.includes('career')) {
       return SectionTypeEnum.EXPERIENCE;
     }
+    if (lower.includes('project') || lower.includes('portfolio') || lower.includes('open source')) {
+      return SectionTypeEnum.PROJECTS;
+    }
     if (lower.includes('education') || lower.includes('academic') || lower.includes('degree') || lower.includes('school')) {
       return SectionTypeEnum.EDUCATION;
     }

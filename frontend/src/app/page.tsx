@@ -42,7 +42,9 @@ export default function LandingPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [createModalMode, setCreateModalMode] = useState<"blank" | "import">("blank");
+  const [createModalMode, setCreateModalMode] = useState<"blank" | "import">(
+    "blank",
+  );
 
   // Check URL query parameters for NextAuth error flags on mount
   useEffect(() => {
@@ -63,8 +65,7 @@ export default function LandingPage() {
           msg =
             "Access was denied. Please sign in with an authorized Google account.";
         } else if (errorParam === "SignInRequired") {
-          msg =
-            "Please sign in with Google to access the resume builder.";
+          msg = "Please sign in with Google to access the resume builder.";
         }
         // Clean URL parameters gracefully
         const cleanUrl = window.location.pathname;
@@ -88,7 +89,7 @@ export default function LandingPage() {
       !file.name.toLowerCase().endsWith(".pdf")
     ) {
       setErrorMessage(
-        "Only PDF documents (.pdf) are supported. Please select a valid PDF file."
+        "Only PDF documents (.pdf) are supported. Please select a valid PDF file.",
       );
       setSelectedFile(null);
       return false;
@@ -96,7 +97,7 @@ export default function LandingPage() {
 
     if (file.size > 10 * 1024 * 1024) {
       setErrorMessage(
-        "The selected file exceeds the 10MB limit. Please choose a smaller PDF."
+        "The selected file exceeds the 10MB limit. Please choose a smaller PDF.",
       );
       setSelectedFile(null);
       return false;
@@ -157,12 +158,12 @@ export default function LandingPage() {
       setTimeout(() => setExtractionStep("Extracting and parsing text…"), 1200),
       setTimeout(
         () => setExtractionStep("Analyzing resume structure with AI…"),
-        2800
+        2800,
       ),
       setTimeout(
         () => setExtractionStep("Populating live editor components…"),
-        4500
-      )
+        4500,
+      ),
     );
 
     try {
@@ -173,7 +174,7 @@ export default function LandingPage() {
       if (!result.success || !result.data) {
         setErrorMessage(
           result.error ||
-            "Failed to extract resume content. Please verify the PDF format and try again."
+            "Failed to extract resume content. Please verify the PDF format and try again.",
         );
         setIsExtracting(false);
         setExtractionStep("");
@@ -305,8 +306,12 @@ export default function LandingPage() {
             <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-sm shadow-sm">
               <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
               <div className="flex-1">
-                <p className="font-bold text-amber-900">Authentication Notice</p>
-                <p className="text-xs sm:text-sm text-amber-800 mt-0.5">{authError}</p>
+                <p className="font-bold text-amber-900">
+                  Authentication Notice
+                </p>
+                <p className="text-xs sm:text-sm text-amber-800 mt-0.5">
+                  {authError}
+                </p>
               </div>
               <button
                 type="button"
@@ -327,7 +332,9 @@ export default function LandingPage() {
               <AlertCircle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="font-bold text-rose-900">Extraction Error</p>
-                <p className="text-xs sm:text-sm text-rose-700 mt-0.5">{errorMessage}</p>
+                <p className="text-xs sm:text-sm text-rose-700 mt-0.5">
+                  {errorMessage}
+                </p>
               </div>
               <button
                 type="button"
@@ -367,7 +374,9 @@ export default function LandingPage() {
 
                 {/* Subtitle */}
                 <p className="mt-3 text-sm sm:text-base text-slate-600 leading-relaxed max-w-xl">
-                  Create recruiter-approved resumes formatted for Applicant Tracking Systems. Start fresh with templates or import your existing PDF for instant AI extraction.
+                  Create recruiter-approved resumes formatted for Applicant
+                  Tracking Systems. Start fresh with templates or import your
+                  existing PDF for instant AI extraction.
                 </p>
 
                 {/* 2 Clear Next-Step Choices */}
@@ -391,7 +400,8 @@ export default function LandingPage() {
                             1. Import Existing PDF
                           </span>
                           <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
-                            AI parses experience, skills & contact info automatically.
+                            AI parses experience, skills & contact info
+                            automatically.
                           </p>
                         </div>
                       </div>
@@ -412,7 +422,8 @@ export default function LandingPage() {
                             2. Start Blank Canvas
                           </span>
                           <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
-                            Standardized ATS sections with live editor & real-time preview.
+                            Standardized ATS sections with live editor &
+                            real-time preview.
                           </p>
                         </div>
                       </div>
@@ -423,13 +434,16 @@ export default function LandingPage() {
                 {/* Trust Badges */}
                 <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-slate-500 font-medium">
                   <span className="inline-flex items-center gap-1.5">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Free Forever Tier
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Free
+                    Forever Tier
                   </span>
                   <span className="inline-flex items-center gap-1.5">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600" /> ATS Scannable
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" /> ATS
+                    Scannable
                   </span>
                   <span className="inline-flex items-center gap-1.5">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Instant PDF Export
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />{" "}
+                    Instant PDF Export
                   </span>
                 </div>
               </div>
@@ -445,32 +459,48 @@ export default function LandingPage() {
               <div className="flex items-center gap-2.5 p-3 rounded-xl bg-white/90 border border-slate-200 shadow-2xs">
                 <ShieldCheck className="h-4 w-4 text-indigo-600 shrink-0" />
                 <div>
-                  <p className="text-xs font-bold text-slate-900">100% Private</p>
-                  <p className="text-[11px] text-slate-500 font-medium leading-none">In-browser local storage</p>
+                  <p className="text-xs font-bold text-slate-900">
+                    100% Private
+                  </p>
+                  <p className="text-[11px] text-slate-500 font-medium leading-none">
+                    In-browser local storage
+                  </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2.5 p-3 rounded-xl bg-white/90 border border-slate-200 shadow-2xs">
                 <Zap className="h-4 w-4 text-purple-600 shrink-0" />
                 <div>
-                  <p className="text-xs font-bold text-slate-900">AI Extraction</p>
-                  <p className="text-[11px] text-slate-500 font-medium leading-none">Fast structured parsing</p>
+                  <p className="text-xs font-bold text-slate-900">
+                    AI Extraction
+                  </p>
+                  <p className="text-[11px] text-slate-500 font-medium leading-none">
+                    Fast structured parsing
+                  </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2.5 p-3 rounded-xl bg-white/90 border border-slate-200 shadow-2xs">
                 <Layers className="h-4 w-4 text-blue-600 shrink-0" />
                 <div>
-                  <p className="text-xs font-bold text-slate-900">Live Preview</p>
-                  <p className="text-[11px] text-slate-500 font-medium leading-none">Letter & A4 pagination</p>
+                  <p className="text-xs font-bold text-slate-900">
+                    Live Preview
+                  </p>
+                  <p className="text-[11px] text-slate-500 font-medium leading-none">
+                    Letter & A4 pagination
+                  </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2.5 p-3 rounded-xl bg-white/90 border border-slate-200 shadow-2xs">
                 <FileCode2 className="h-4 w-4 text-emerald-600 shrink-0" />
                 <div>
-                  <p className="text-xs font-bold text-slate-900">ATS Friendly</p>
-                  <p className="text-[11px] text-slate-500 font-medium leading-none">Optimized for scanners</p>
+                  <p className="text-xs font-bold text-slate-900">
+                    ATS Friendly
+                  </p>
+                  <p className="text-[11px] text-slate-500 font-medium leading-none">
+                    Optimized for scanners
+                  </p>
                 </div>
               </div>
             </div>

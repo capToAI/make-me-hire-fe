@@ -5,11 +5,13 @@ import type {
   SectionData,
   SectionType,
   ExperienceData,
+  ProjectsData,
   EducationData,
   CertificationsData,
   LanguagesData,
   CustomData,
   ExperienceEntry,
+  ProjectEntry,
   EducationEntry,
   CertificationEntry,
   LanguageEntry,
@@ -63,7 +65,13 @@ function reorder<T>(list: T[], fromIndex: number, toIndex: number): T[] {
 
 function makeEmptyEntry(
   type: SectionType
-): ExperienceEntry | EducationEntry | CertificationEntry | LanguageEntry | CustomEntry {
+):
+  | ExperienceEntry
+  | ProjectEntry
+  | EducationEntry
+  | CertificationEntry
+  | LanguageEntry
+  | CustomEntry {
   if (type === "experience") {
     return {
       id: makeId("entry"),
@@ -73,6 +81,15 @@ function makeEmptyEntry(
       end: "",
       current: false,
       bullets: [],
+    };
+  }
+  if (type === "projects") {
+    return {
+      id: makeId("entry"),
+      name: "",
+      link: "",
+      bullets: [""],
+      technologies: [],
     };
   }
   if (type === "education") {
@@ -114,6 +131,7 @@ function hasEntries(
   data: SectionData
 ): data is
   | ExperienceData
+  | ProjectsData
   | EducationData
   | CertificationsData
   | LanguagesData
@@ -122,8 +140,14 @@ function hasEntries(
 }
 
 function hasBullets(
-  entry: ExperienceEntry | EducationEntry | CertificationEntry | LanguageEntry | CustomEntry
-): entry is ExperienceEntry | CustomEntry {
+  entry:
+    | ExperienceEntry
+    | ProjectEntry
+    | EducationEntry
+    | CertificationEntry
+    | LanguageEntry
+    | CustomEntry
+): entry is ExperienceEntry | ProjectEntry | CustomEntry {
   return Array.isArray((entry as { bullets?: unknown }).bullets);
 }
 
@@ -243,7 +267,12 @@ export function resumeReducer(
       const section = state.sections[action.sectionId];
       if (!section || !hasEntries(section.data)) return state;
       const entries = section.data.entries as Array<
-        ExperienceEntry | EducationEntry | CertificationEntry | LanguageEntry | CustomEntry
+        | ExperienceEntry
+        | ProjectEntry
+        | EducationEntry
+        | CertificationEntry
+        | LanguageEntry
+        | CustomEntry
       >;
       const data = {
         entries: reorder(entries, action.fromIndex, action.toIndex),

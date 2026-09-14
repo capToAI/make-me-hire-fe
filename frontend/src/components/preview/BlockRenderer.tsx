@@ -113,6 +113,52 @@ export function SingleBlockRenderer({
       );
     }
 
+    case "project_header": {
+      const techText =
+        block.technologies && block.technologies.length > 0
+          ? ` - ${block.technologies.join(", ")}`
+          : "";
+
+      return (
+        <div className="flex items-baseline justify-between gap-2 mt-2">
+          <p className="text-[12px] text-black">
+            <span className="font-bold">
+              {block.link ? (
+                <a
+                  href={
+                    block.link.startsWith("http://") ||
+                    block.link.startsWith("https://")
+                      ? block.link
+                      : `https://${block.link}`
+                  }
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hover:underline text-black print:no-underline"
+                >
+                  {renderFormattedText(block.name)}
+                </a>
+              ) : (
+                renderFormattedText(block.name)
+              )}
+            </span>
+            {techText && (
+              <span className="font-normal text-[11.5px]">
+                {techText}
+              </span>
+            )}
+          </p>
+        </div>
+      );
+    }
+
+    case "project_bullet": {
+      return (
+        <ul className="mt-0.5 list-disc space-y-0.5 pl-4 text-[11.5px] leading-snug text-black">
+          <li>{renderFormattedText(block.text)}</li>
+        </ul>
+      );
+    }
+
     case "edu_entry": {
       return (
         <div className="flex items-baseline justify-between gap-2 mt-1.5">
@@ -231,7 +277,11 @@ export function PageBlocksRenderer({ blocks }: { blocks: ResumeBlock[] }) {
     const current = blocks[i];
     const isTopOfPage = i === 0;
 
-    if (current.type === "exp_bullet" || current.type === "custom_bullet") {
+    if (
+      current.type === "exp_bullet" ||
+      current.type === "project_bullet" ||
+      current.type === "custom_bullet"
+    ) {
       const bulletGroup: typeof current[] = [current];
       let j = i + 1;
       while (

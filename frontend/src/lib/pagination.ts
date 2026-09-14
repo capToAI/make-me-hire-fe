@@ -5,6 +5,7 @@ import type {
   SummaryData,
   SkillsData,
   ExperienceData,
+  ProjectsData,
   EducationData,
   CertificationsData,
   LanguagesData,
@@ -13,6 +14,7 @@ import type {
 import {
   sectionHasContent,
   isExperienceEntryEmpty,
+  isProjectEntryEmpty,
   isEducationEntryEmpty,
   isCertificationEntryEmpty,
   isLanguageEntryEmpty,
@@ -85,6 +87,25 @@ export type ResumeBlock =
   | {
       id: string;
       type: "exp_bullet";
+      sectionId: string;
+      entryId: string;
+      bulletIndex: number;
+      text: string;
+      isFirstBullet: boolean;
+      isLastBullet: boolean;
+    }
+  | {
+      id: string;
+      type: "project_header";
+      sectionId: string;
+      entryId: string;
+      name: string;
+      link?: string;
+      technologies: string[];
+    }
+  | {
+      id: string;
+      type: "project_bullet";
       sectionId: string;
       entryId: string;
       bulletIndex: number;
@@ -229,6 +250,46 @@ export function flattenStateToBlocks(state: ResumeState): ResumeBlock[] {
               blocks.push({
                 id: `exp-bullet-${entry.id}-${bIdx}`,
                 type: "exp_bullet",
+                sectionId: section.id,
+                entryId: entry.id,
+                bulletIndex: bIdx,
+                text: bullet,
+                isFirstBullet: bIdx === 0,
+                isLastBullet: bIdx === bullets.length - 1,
+              });
+            });
+          }
+        }
+        break;
+      }
+
+      case "projects": {
+        const data = section.data as ProjectsData;
+        const entries = data.entries.filter((e) => !isProjectEntryEmpty(e));
+        if (entries.length > 0) {
+          blocks.push({
+            id: `heading-${section.id}`,
+            type: "heading",
+            sectionId: section.id,
+            title: section.title,
+          });
+          for (const entry of entries) {
+            const bullets = entry.bullets.filter((b) => b.trim() !== "");
+            blocks.push({
+              id: `proj-header-${entry.id}`,
+              type: "project_header",
+              sectionId: section.id,
+              entryId: entry.id,
+              name: entry.name,
+              link: entry.link,
+              technologies: Array.isArray(entry.technologies)
+                ? entry.technologies.filter(Boolean)
+                : [],
+            });
+            bullets.forEach((bullet, bIdx) => {
+              blocks.push({
+                id: `proj-bullet-${entry.id}-${bIdx}`,
+                type: "project_bullet",
                 sectionId: section.id,
                 entryId: entry.id,
                 bulletIndex: bIdx,
@@ -391,12 +452,15 @@ export function paginateBlocks(
 
     // Orphan check for entry headers: header + first bullet must fit together
     if (
-      (block.type === "exp_header" || block.type === "custom_header") &&
+      (block.type === "exp_header" ||
+        block.type === "project_header" ||
+        block.type === "custom_header") &&
       i + 1 < blocks.length
     ) {
       const nextBlock = blocks[i + 1];
       if (
         nextBlock.type === "exp_bullet" ||
+        nextBlock.type === "project_bullet" ||
         nextBlock.type === "custom_bullet"
       ) {
         const nextHeight = heightsMap[nextBlock.id] || 20;

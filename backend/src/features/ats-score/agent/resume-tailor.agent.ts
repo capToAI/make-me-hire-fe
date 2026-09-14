@@ -231,12 +231,16 @@ export class ResumeTailorAgent {
 
         for (const secId of sectionOrder) {
           const section = sections[secId];
-          if (section?.type === 'custom' && Array.isArray(section.data?.entries)) {
+          if (
+            (section?.type === 'custom' || section?.type === 'projects') &&
+            Array.isArray(section.data?.entries)
+          ) {
             section.data.entries.forEach((entry: any) => {
+              const nameOrHeading = (entry.name || entry.heading || '').toLowerCase().trim();
               if (entry.id && projectById.has(entry.id)) {
                 entry.bullets = projectById.get(entry.id)!;
-              } else if (entry.heading && projectByHeading.has(entry.heading.toLowerCase().trim())) {
-                entry.bullets = projectByHeading.get(entry.heading.toLowerCase().trim())!;
+              } else if (nameOrHeading && projectByHeading.has(nameOrHeading)) {
+                entry.bullets = projectByHeading.get(nameOrHeading)!;
               }
             });
           }
@@ -248,6 +252,13 @@ export class ResumeTailorAgent {
       Object.values(originalResumeData.sections || {}).forEach((sec: any) => {
         if (sec?.type === 'skills' && Array.isArray(sec.data?.items)) {
           allOriginalSkills.push(...sec.data.items);
+        }
+        if (sec?.type === 'projects' && Array.isArray(sec.data?.entries)) {
+          sec.data.entries.forEach((p: any) => {
+            if (Array.isArray(p.technologies)) {
+              allOriginalSkills.push(...p.technologies);
+            }
+          });
         }
       });
       const allKnownCandidateSkills = [...allOriginalSkills, ...confirmedSkills];

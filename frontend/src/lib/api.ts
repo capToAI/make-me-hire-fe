@@ -206,6 +206,89 @@ export async function refineSummaryWithAi(
   }
 }
 
+export interface RefineProjectBulletsData {
+  originalBullets: string[];
+  refinedBullets: string[];
+}
+
+export interface RefineProjectBulletsResponse {
+  success: boolean;
+  data?: RefineProjectBulletsData;
+  error?: string;
+}
+
+/**
+ * Sends project bullet points to backend AI to elevate impact, add strong action verbs,
+ * quantify outcomes where feasible, and bold key keywords.
+ */
+export async function refineProjectBulletsWithAi(params: {
+  projectName?: string;
+  technologies?: string[];
+  bullets: string[];
+}): Promise<RefineProjectBulletsResponse> {
+  const filteredBullets = params.bullets.filter((b) => b.trim().length > 0);
+  if (filteredBullets.length === 0) {
+    return {
+      success: false,
+      error: "Please enter at least one bullet point first before refining with AI.",
+    };
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/resume-builder/refine-project-bullets`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        projectName: params.projectName || "",
+        technologies: params.technologies || [],
+        bullets: filteredBullets,
+      }),
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Server responded with status ${response.status}`;
+      try {
+        const errorData = await response.json();
+        if (errorData?.message) {
+          errorMessage = Array.isArray(errorData.message)
+            ? errorData.message.join(", ")
+            : errorData.message;
+        }
+      } catch {
+        // fallback
+      }
+      return { success: false, error: errorMessage };
+    }
+
+    const resJson = await response.json();
+    if (!resJson || !Array.isArray(resJson.refinedBullets)) {
+      return {
+        success: false,
+        error: "AI refinement service returned an invalid response.",
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        originalBullets: resJson.originalBullets || filteredBullets,
+        refinedBullets: resJson.refinedBullets,
+      },
+    };
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error
+        ? err.message
+        : "Failed to connect to the project refinement service.";
+    return {
+      success: false,
+      error: `Network / server connection error: ${message}`,
+    };
+  }
+}
+
 /**
  * Fetches the authenticated user's list of saved resumes.
  */

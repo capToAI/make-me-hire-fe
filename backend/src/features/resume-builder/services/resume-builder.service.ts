@@ -5,6 +5,10 @@ import { ResumeExtractorAgent } from '../agent/resume-extractor.agent';
 import { SummaryRefinerAgent } from '../agent/summary-refiner.agent';
 import { RefineSummaryDto } from '../models/refine-summary.dto';
 import { RefineSummaryResponseDto } from '../models/refine-summary-response.dto';
+import {
+  RefineProjectBulletsDto,
+  RefineProjectBulletsResponseDto,
+} from '../models/refine-project.dto';
 import { ResumeStateDto } from '../models/resume-state.dto';
 import { PdfExtractorService } from './pdf-extractor.service';
 
@@ -66,6 +70,36 @@ export class ResumeBuilderService {
     return {
       oldSummary: rawSummary,
       newSummary,
+    };
+  }
+
+  /**
+   * Refines project bullet points using the Summary Refiner Agent.
+   *
+   * @param {RefineProjectBulletsDto} dto - Project bullets refinement payload.
+   * @returns {Promise<RefineProjectBulletsResponseDto>} Object with originalBullets and refinedBullets.
+   */
+  async refineProjectBullets(
+    dto: RefineProjectBulletsDto,
+  ): Promise<RefineProjectBulletsResponseDto> {
+    const rawBullets = Array.isArray(dto?.bullets)
+      ? dto.bullets.filter((b) => b && b.trim().length > 0)
+      : [];
+
+    if (rawBullets.length === 0) {
+      throw new BadRequestException('At least one non-empty bullet point must be provided.');
+    }
+
+    this.logger.log(`Refining ${rawBullets.length} project bullets for project "${dto.projectName || 'Untitled'}"`);
+    const refinedBullets = await this.summaryRefinerAgent.refineProjectBullets(
+      dto.projectName,
+      dto.technologies,
+      rawBullets,
+    );
+
+    return {
+      originalBullets: rawBullets,
+      refinedBullets,
     };
   }
 }

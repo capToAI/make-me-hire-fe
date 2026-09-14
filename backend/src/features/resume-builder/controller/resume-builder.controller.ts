@@ -22,6 +22,10 @@ import 'multer';
 import { GeneratePdfDto } from '../models/generate-pdf.dto';
 import { RefineSummaryDto } from '../models/refine-summary.dto';
 import { RefineSummaryResponseDto } from '../models/refine-summary-response.dto';
+import {
+  RefineProjectBulletsDto,
+  RefineProjectBulletsResponseDto,
+} from '../models/refine-project.dto';
 import { ResumeStateDto } from '../models/resume-state.dto';
 import { UploadResumeDto } from '../models/upload-resume.dto';
 import { PdfGeneratorService } from '../services/pdf-generator.service';
@@ -177,5 +181,41 @@ export class ResumeBuilderController {
     @Body() dto: RefineSummaryDto,
   ): Promise<RefineSummaryResponseDto> {
     return this.resumeBuilderService.refineSummary(dto);
+  }
+
+  /**
+   * Refines project bullet points using the AI Refinement Agent.
+   *
+   * @param {RefineProjectBulletsDto} dto - Contains project context and draft bullets.
+   * @returns {Promise<RefineProjectBulletsResponseDto>} Object containing originalBullets and refinedBullets.
+   */
+  @Post('refine-project-bullets')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Refine project bullets with AI',
+    description:
+      'Takes draft project bullet points and elevates them with strong action verbs, quantifiable metrics, and bold keywords.',
+  })
+  @ApiBody({
+    description: 'Project bullets refinement payload',
+    type: RefineProjectBulletsDto,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully refined project bullets',
+    type: RefineProjectBulletsResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Missing or invalid project bullets payload',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal Server Error - AI refinement failure',
+  })
+  async refineProjectBullets(
+    @Body() dto: RefineProjectBulletsDto,
+  ): Promise<RefineProjectBulletsResponseDto> {
+    return this.resumeBuilderService.refineProjectBullets(dto);
   }
 }
