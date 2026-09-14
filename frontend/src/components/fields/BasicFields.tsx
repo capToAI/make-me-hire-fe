@@ -55,7 +55,7 @@ export function BasicFields({
           className={inputClass}
           value={data.jobTitle}
           onChange={(e) => update({ jobTitle: e.target.value })}
-          placeholder="Senior Software Engineer"
+          placeholder="e.g., Marketing Lead, Financial Analyst, Software Engineer, Nurse"
         />
       </div>
 

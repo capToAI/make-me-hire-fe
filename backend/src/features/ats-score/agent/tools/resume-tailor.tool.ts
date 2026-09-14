@@ -232,6 +232,32 @@ export class ResumeTailorTool {
     // 3. Process Experience Section
     for (const secId of sectionOrder) {
       const section = sections[secId];
+      const strongVerbs = [
+        'Led',
+        'Developed',
+        'Architected',
+        'Implemented',
+        'Spearheaded',
+        'Engineered',
+        'Optimized',
+        'Streamlined',
+        'Delivered',
+        'Coordinated',
+        'Designed',
+        'Accelerated',
+        'Managed',
+        'Directed',
+        'Built',
+        'Orchestrated',
+      ];
+      const deliveryStarters = [
+        'Successfully delivered',
+        'Spearheaded the delivery of',
+        'Streamlined and executed',
+        'Coordinated and delivered',
+        'Optimized and executed',
+      ];
+
       if (section?.type === 'experience' && Array.isArray(section.data?.entries)) {
         let bulletsUpdated = 0;
         section.data.entries.forEach((entry: any) => {
@@ -240,14 +266,11 @@ export class ResumeTailorTool {
             entry.bullets = entry.bullets.map((bullet: string) => {
               if (
                 bullet &&
-                !bullet.startsWith('Led') &&
-                !bullet.startsWith('Developed') &&
-                !bullet.startsWith('Architected') &&
-                !bullet.startsWith('Implemented') &&
-                !bullet.startsWith('Spearheaded')
+                !strongVerbs.some((v) => bullet.startsWith(v) || bullet.startsWith(`**${v}`))
               ) {
+                const prefix = deliveryStarters[bulletsUpdated % deliveryStarters.length];
                 bulletsUpdated++;
-                return `Engineered and delivered: ${bullet.charAt(0).toLowerCase() + bullet.slice(1)}`;
+                return `${prefix}: ${bullet.charAt(0).toLowerCase() + bullet.slice(1)}`;
               }
               return bullet;
             });
@@ -266,23 +289,29 @@ export class ResumeTailorTool {
 
     // 4. Process Project / Custom Sections
     const projectChanges: TailorChangeItem[] = [];
+    const projectDeliveryStarters = [
+      'Spearheaded and launched',
+      'Delivered and optimized',
+      'Coordinated the execution of',
+      'Successfully delivered',
+      'Architected and deployed',
+    ];
     for (const secId of sectionOrder) {
       const section = sections[secId];
-      if (section?.type === 'custom' && Array.isArray(section.data?.entries)) {
+      if ((section?.type === 'custom' || section?.type === 'projects') && Array.isArray(section.data?.entries)) {
         let projectBulletsUpdated = 0;
         section.data.entries.forEach((entry: any) => {
           if (Array.isArray(entry.bullets) && entry.bullets.length > 0) {
             entry.bullets = entry.bullets.map((bullet: string) => {
               if (
                 bullet &&
-                !bullet.startsWith('Architected') &&
-                !bullet.startsWith('Engineered') &&
-                !bullet.startsWith('Developed') &&
-                !bullet.startsWith('Implemented') &&
-                !bullet.startsWith('Spearheaded')
+                !['Architected', 'Engineered', 'Developed', 'Implemented', 'Spearheaded', 'Delivered', 'Optimized', 'Designed', 'Launched', 'Led', 'Built', 'Coordinated'].some(
+                  (v) => bullet.startsWith(v) || bullet.startsWith(`**${v}`)
+                )
               ) {
+                const prefix = projectDeliveryStarters[projectBulletsUpdated % projectDeliveryStarters.length];
                 projectBulletsUpdated++;
-                return `Engineered and delivered: ${bullet.charAt(0).toLowerCase() + bullet.slice(1)}`;
+                return `${prefix}: ${bullet.charAt(0).toLowerCase() + bullet.slice(1)}`;
               }
               return bullet;
             });
@@ -292,8 +321,8 @@ export class ResumeTailorTool {
         if (projectBulletsUpdated > 0) {
           projectChanges.push({
             title: `Enhanced ${section.title || 'Project'} Descriptions`,
-            description: `Strengthened ${projectBulletsUpdated} project bullets with proactive action verbs and technical delineation.`,
-            impact: 'Highlights technical delivery and architecture depth to ATS scanners.',
+            description: `Strengthened ${projectBulletsUpdated} project bullets with proactive action verbs and domain delineation.`,
+            impact: 'Highlights strategic delivery and execution depth to ATS scanners and recruiters.',
           });
         }
       }

@@ -16,11 +16,11 @@ Your task is to analyze unstructured raw text extracted from a resume PDF and co
    - "summary": Professional summary, bio, or profile objective paragraph.
    - "skills": Technical and soft skills. Group into a categoryLabel (e.g., "Skills" or "Technologies") with an array of individual skill items.
    - "experience": Work history only. Each entry requires: company (MUST be a real company/employer, NOT a degree), role, start date, end date, current (boolean), and bullets (array of achievements/responsibilities).
-   - "projects": Software/hardware projects, applications, portfolio entries, personal/academic works. Each project entry requires:
-     * name: Project title (e.g., "SOUTHSTREAM - ASSET TRACE (ITALI)", "MOVIEPASS SHOWTIME (US)").
-     * link: GitHub or live demo URL if present, or empty string.
-     * technologies: Array of technologies used in the project (e.g. from "Technologies: Angular, HTML, CSS..."). Extract the individual technology names into an array of strings: ["Angular", "HTML", "CSS", "Leaflet Map", "Bitbucket"]. DO NOT put the "Technologies:" line into bullets.
-     * bullets: Array of bullet points describing the project architecture, features, and impact.
+   - "projects": Key projects, campaigns, case studies, initiatives, portfolio entries, applications, personal or professional works. Each project entry requires:
+     * name: Project title (e.g., "SOUTHSTREAM - ASSET TRACE", "Q3 Digital Marketing Campaign", "Clinical Workflow Optimization").
+     * link: Live URL, portfolio, GitHub, or demo link if present, or empty string.
+     * technologies: Array of tools, technologies, platforms, or methodologies used in the project (e.g. ["Angular", "TypeScript"] or ["HubSpot", "Google Analytics", "Figma"] or ["Excel", "QuickBooks"]). DO NOT put the "Technologies:" line into bullets.
+     * bullets: Array of bullet points describing the project objectives, features, responsibilities, and impact.
      NEVER put projects into "custom".
    - "education": Academic degrees and qualifications (e.g. M.Com, B.Com, B.Sc). NEVER put academic degrees into "experience".
    - "certifications": Professional credentials/licenses.
