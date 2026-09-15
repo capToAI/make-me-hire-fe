@@ -11,13 +11,13 @@ STRICT OPERATIONAL RULES:
    - NEVER invent, hallucinate, or fabricate employers, job titles, employment dates, degrees, universities, certifications, or metrics.
    - NEVER invent new projects or work experience out of thin air.
    - PRESERVE ORIGINAL METRICS: Retain all actual numbers, percentages, and metrics provided by the candidate; do not invent new figures.
-   - SYNONYM HARMONIZATION IS PERMITTED & ENCOURAGED: If the candidate possesses a direct synonym or equivalent variation of a skill in the job description (e.g., candidate has "React" and job seeks "React.js"; candidate has "Node" and job seeks "Node.js"; candidate has "Postgres" and job seeks "PostgreSQL"; candidate has "TypeScript" and job seeks "TS"), you MUST automatically harmonize the skill phrasing in the tailored resume (e.g. "React.js" or "React (React.js)") to match the target ATS scanner terms.
+   - SYNONYM HARMONIZATION IS PERMITTED & ENCOURAGED: If the candidate possesses a direct synonym or equivalent variation of a skill in the job description (e.g. "React" == "React.js", "QuickBooks" == "Intuit QuickBooks", "GAAP" == "Generally Accepted Accounting Principles", "BLS" == "Basic Life Support", "SEO" == "Search Engine Optimization"), you MUST automatically harmonize the skill phrasing in the tailored resume (e.g. "React.js" or "GAAP Compliance" or "QuickBooks") to match the target ATS scanner terms.
    - Do NOT add completely new technologies, tools, or skills to the resume UNLESS:
      a) They are direct synonyms/aliases of existing skills, OR
      b) They are explicitly provided in the "USER CONFIRMED SKILLS" list.
 
 2. TARGET ROLE & HEADLINE ALIGNMENT:
-   - Propose an optimized, ATS-aligned target job title / professional headline (e.g. "Senior Marketing Manager | Growth, SEO & Brand Strategy" or "Senior Software Engineer | Distributed Systems & Cloud") for the candidate that directly mirrors the core position title and primary domain competencies from the job description while staying truthful to their experience level.
+   - Propose an optimized, ATS-aligned target job title / professional headline (e.g. "Senior Marketing Manager | Growth, SEO & Brand Strategy", "Senior Financial Analyst | GAAP, Financial Modeling & Budgeting", "Charge Nurse | Clinical Triage & Emergency Care", or "Senior Software Engineer | Distributed Systems & Cloud") for the candidate that directly mirrors the core position title and primary domain competencies from the job description while staying truthful to their experience level.
    - Return this in "tailoredJobTitle".
 
 3. PROFESSIONAL SUMMARY ENHANCEMENT:
@@ -81,11 +81,11 @@ Full Missing Keywords & Skills to Target: ${missingKeywords.join(', ') || 'None 
 User Confirmed Additional Skills: ${confirmedSkills.join(', ') || 'None confirmed yet (DO NOT add unconfirmed skills)'}
 
 INSTRUCTIONS:
-1. Target Job Title / Headline: Propose an optimized professional headline/title matching the target job description and candidate seniority (e.g. "Senior Angular Developer | TypeScript, RxJS & NgRx") in "tailoredJobTitle".
+1. Target Job Title / Headline: Propose an optimized professional headline/title matching the target job description and candidate seniority (e.g. for finance: "Senior Financial Analyst | GAAP, Modeling & Budgeting", for tech: "Senior Software Engineer | Cloud & Distributed Systems", for healthcare: "Charge Nurse | Clinical Triage & Patient Care", for marketing: "Growth Marketing Lead | SEO & Funnels") in "tailoredJobTitle".
 2. Professional Summary: Generate an optimized 3-4 sentence summary (if a summary section exists in original) integrating target domain terms truthfully.
 3. Work Experience Bullets: Refine existing bullet points using the Google XYZ formula ("Accomplished [X] as measured by [Y], by doing [Z]"), preserving actual metrics and company/role names. Weave in missing domain keywords and methodologies naturally where truthful. Keep bullets concise (15-25 words) and maintain similar bullet counts.
-4. Project & Portfolio Bullets: Enhance existing project descriptions/bullets from custom sections using the Google XYZ formula, emphasizing target tech stack and domain relevance while keeping project names and facts intact. Return in "projectBullets".
-5. Skills Organization: Reorganize skills prioritizing target JD technologies (include existing skills + user confirmed skills only; do NOT add unconfirmed skills). Harmonize synonyms (e.g. React -> React.js).
+4. Project & Portfolio Bullets: Enhance existing project descriptions/bullets from custom sections using the Google XYZ formula, emphasizing target domain competencies, methodologies, and tools while keeping project names and facts intact. Return in "projectBullets".
+5. Skills Organization: Reorganize skills prioritizing target JD technologies (include existing skills + user confirmed skills only; do NOT add unconfirmed skills). Harmonize synonyms (e.g. React -> React.js, QuickBooks -> Intuit QuickBooks).
 6. Suggested Missing Skills: Cross-reference the full missing keywords and skills list against the candidate resume. Identify all genuinely unpossessed technologies requiring user confirmation, returning them in "suggestedSkills" with reasons and relevance.
 7. Change Documentation: Provide a detailed, categorized breakdown of changes made across summary, experience, projects, keywords, and skills with ATS impact.
 `.trim();

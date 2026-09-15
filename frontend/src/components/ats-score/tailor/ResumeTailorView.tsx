@@ -5,6 +5,7 @@ import {
   AlertCircle,
   ArrowLeft,
   Check,
+  CheckCircle,
   ChevronDown,
   ChevronUp,
   FileText,
@@ -36,9 +37,21 @@ export function ResumeTailorView({
 }: ResumeTailorViewProps) {
   // Local state for staged skills to add
   const [stagedSkills, setStagedSkills] = useState<string[]>([]);
+  const [hasAppliedSkills, setHasAppliedSkills] = useState(false);
   const [isJobDescExpanded, setIsJobDescExpanded] = useState(false);
   const [isChangesExpanded, setIsChangesExpanded] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Check if skills have already been integrated into tailoredResult (one-time lock)
+  const isSkillsAlreadyTailored = useMemo(() => {
+    if (hasAppliedSkills) return true;
+    const addedSkills = tailoredResult.changes?.skills?.some((item) =>
+      item.title?.toLowerCase().includes("user-confirmed") ||
+      item.title?.toLowerCase().includes("confirmed") ||
+      item.description?.toLowerCase().includes("added confirmed")
+    );
+    return Boolean(addedSkills);
+  }, [hasAppliedSkills, tailoredResult.changes?.skills]);
 
   // Extract matched keywords: prioritize tailoredResult.matchedKeywords from ATS evaluation
   const matchedKeywords = useMemo(() => {
@@ -85,6 +98,7 @@ export function ResumeTailorView({
 
   // Toggle staging of a missing skill
   const handleToggleSkill = (skillName: string) => {
+    if (isSkillsAlreadyTailored) return;
     setStagedSkills((prev) =>
       prev.includes(skillName)
         ? prev.filter((s) => s !== skillName)
@@ -92,14 +106,15 @@ export function ResumeTailorView({
     );
   };
 
-  // Trigger recalculation with staged skills
+  // Trigger recalculation with staged skills (one-time generation)
   const handleRegenerate = async () => {
-    if (stagedSkills.length === 0) return;
+    if (stagedSkills.length === 0 || isSkillsAlreadyTailored) return;
     setErrorMessage(null);
     try {
       const rejected = missingSkills.filter((s) => !stagedSkills.includes(s));
       await onRecalculateWithSkills(stagedSkills, rejected);
       setStagedSkills([]);
+      setHasAppliedSkills(true);
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : "Failed to recalculate tailored score";
@@ -107,28 +122,7 @@ export function ResumeTailorView({
     }
   };
 
-  // Map of skill name to its authentic marginal scoreImpact from ATS evaluation
-  const skillImpactMap = useMemo(() => {
-    const map = new Map<string, number>();
-    (tailoredResult.suggestedSkills || []).forEach((s) => {
-      if (s.name) {
-        map.set(s.name.toLowerCase().trim(), s.scoreImpact ?? 3);
-      }
-    });
-    return map;
-  }, [tailoredResult.suggestedSkills]);
-
-  const getSkillImpact = (skillName: string): number => {
-    return skillImpactMap.get(skillName.toLowerCase().trim()) ?? 3;
-  };
-
-  // Predicted score calculation summing authentic scoreImpact of staged keywords
   const stagedCount = stagedSkills.length;
-  const estimatedGain = useMemo(() => {
-    return stagedSkills.reduce((sum, skill) => sum + getSkillImpact(skill), 0);
-  }, [stagedSkills, skillImpactMap]);
-
-  const predictedScore = Math.min(98, tailoredResult.tailoredScore + estimatedGain);
 
   const totalChangesCount =
     (tailoredResult.changes?.summary?.length || 0) +
@@ -250,19 +244,6 @@ export function ResumeTailorView({
                     +{tailoredResult.scoreDifference}
                   </span>
                 </div>
-
-                {/* Staged Score Gain Preview */}
-                {stagedCount > 0 && (
-                  <div className="flex items-baseline gap-1.5 animate-in fade-in duration-150">
-                    <span className="text-xs text-slate-400">After regenerating</span>
-                    <span className="text-lg font-bold text-emerald-600">
-                      ~{predictedScore}
-                    </span>
-                    <span className="text-xs font-bold text-emerald-600">
-                      (+{estimatedGain})
-                    </span>
-                  </div>
-                )}
               </div>
 
               {/* Score Dual-Tone Progress Bar */}
@@ -277,13 +258,6 @@ export function ResumeTailorView({
                   style={{ width: `${tailoredResult.scoreDifference}%` }}
                   className="h-full bg-emerald-500 transition-all duration-500"
                 />
-                {/* Potential Extra Gain from Staged Skills */}
-                {stagedCount > 0 && (
-                  <div
-                    style={{ width: `${Math.min(estimatedGain, 100 - tailoredResult.tailoredScore)}%` }}
-                    className="h-full bg-indigo-400/80 animate-pulse transition-all duration-300"
-                  />
-                )}
               </div>
             </div>
 
@@ -306,91 +280,127 @@ export function ResumeTailorView({
               </div>
             </div>
 
-            {/* Missing Keywords (Interactive Selection) */}
+            {/* Missing Keywords Section */}
             <div className="space-y-2 pt-2 border-t border-slate-100">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-900">
-                  <X className="h-4 w-4 text-rose-500 stroke-[2.5]" />
-                  <span>Missing keywords ({missingSkills.length})</span>
-                </div>
-                {stagedCount > 0 && (
-                  <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
-                    {stagedCount} selected
-                  </span>
-                )}
-              </div>
-
-              {missingSkills.length > 0 ? (
-                <>
-                  <div className="flex flex-wrap gap-1.5">
-                    {missingSkills.map((skill, i) => {
-                      const isStaged = stagedSkills.includes(skill);
-                      const impact = getSkillImpact(skill);
-                      return (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => handleToggleSkill(skill)}
-                          className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
-                            isStaged
-                              ? "border-indigo-400 bg-indigo-50 text-indigo-800 font-semibold shadow-2xs ring-1 ring-indigo-400/40"
-                              : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                          }`}
-                        >
-                          <span>{skill}</span>
-                          <span
-                            className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
-                              isStaged
-                                ? "bg-indigo-200/70 text-indigo-900"
-                                : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-                            }`}
-                          >
-                            +{impact}
-                          </span>
-                          {isStaged ? (
-                            <X className="h-3 w-3 text-indigo-600" />
-                          ) : (
-                            <Check className="h-3 w-3 text-slate-400" />
-                          )}
-                        </button>
-                      );
-                    })}
+              {isSkillsAlreadyTailored ? (
+                /* Post-tailoring State: Read-Only Completion View */
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-900">
+                      <CheckCircle className="h-4 w-4 text-emerald-600 stroke-[2.5]" />
+                      <span>Skills Integrated</span>
+                    </div>
+                    <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                      Finalized
+                    </span>
                   </div>
 
-                  <p className="text-[11px] text-slate-500">
-                    Tick the keywords you genuinely have and we will add them into the tailored resume.
-                  </p>
+                  <div className="rounded-xl bg-emerald-50/70 border border-emerald-200/80 p-3 text-xs text-emerald-800 flex items-start gap-2.5">
+                    <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <div className="space-y-0.5">
+                      <p className="font-semibold">Confirmed skills built into resume</p>
+                      <p className="text-[11px] text-emerald-700 leading-relaxed">
+                        Your confirmed skills have been integrated and the final ATS score is now calculated.
+                      </p>
+                    </div>
+                  </div>
 
-                  {/* Regenerate Action Button */}
-                  {stagedCount > 0 && (
-                    <div className="pt-2 animate-in fade-in duration-200">
-                      <button
-                        type="button"
-                        onClick={handleRegenerate}
-                        disabled={isRecalculating}
-                        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-xs sm:text-sm py-2.5 px-4 shadow-sm transition-all cursor-pointer disabled:opacity-50"
-                      >
-                        {isRecalculating ? (
-                          <>
-                            <RefreshCw className="h-4 w-4 animate-spin" />
-                            <span>Regenerating Tailored Resume...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="h-4 w-4" />
-                            <span>
-                              Regenerate Tailored Resume ({stagedCount})
-                            </span>
-                          </>
-                        )}
-                      </button>
+                  {missingSkills.length > 0 && (
+                    <div className="space-y-1.5">
+                      <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                        Remaining Job Keywords ({missingSkills.length})
+                      </span>
+                      <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+                        {missingSkills.map((skill, i) => (
+                          <span
+                            key={i}
+                            className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   )}
-                </>
+                </div>
               ) : (
-                <p className="text-xs text-emerald-600 font-medium">
-                  All critical job keywords have been matched!
-                </p>
+                /* Pre-tailoring State: Interactive Keyword Selection */
+                <>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-900">
+                      <X className="h-4 w-4 text-rose-500 stroke-[2.5]" />
+                      <span>Missing keywords ({missingSkills.length})</span>
+                    </div>
+                    {stagedCount > 0 && (
+                      <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+                        {stagedCount} selected
+                      </span>
+                    )}
+                  </div>
+
+                  {missingSkills.length > 0 ? (
+                    <>
+                      <div className="flex flex-wrap gap-1.5">
+                        {missingSkills.map((skill, i) => {
+                          const isStaged = stagedSkills.includes(skill);
+                          return (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => handleToggleSkill(skill)}
+                              className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
+                                isStaged
+                                  ? "border-indigo-500 bg-indigo-50 text-indigo-800 font-semibold shadow-2xs ring-1 ring-indigo-400/40"
+                                  : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                              }`}
+                            >
+                              <span>{skill}</span>
+                              {isStaged ? (
+                                <X className="h-3 w-3 text-indigo-600" />
+                              ) : (
+                                <Check className="h-3 w-3 text-slate-400" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <p className="text-[11px] text-slate-500">
+                        Select any keywords you have and click below to integrate them into the tailored resume.
+                      </p>
+
+                      {/* Regenerate Action Button */}
+                      {stagedCount > 0 && (
+                        <div className="pt-2 animate-in fade-in duration-200">
+                          <button
+                            type="button"
+                            onClick={handleRegenerate}
+                            disabled={isRecalculating}
+                            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-xs sm:text-sm py-2.5 px-4 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            {isRecalculating ? (
+                              <>
+                                <RefreshCw className="h-4 w-4 animate-spin" />
+                                <span>Generating Tailored Resume...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="h-4 w-4" />
+                                <span>
+                                  Integrate Skills & Generate ({stagedCount})
+                                </span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-xs text-emerald-600 font-medium">
+                      All critical job keywords have been matched!
+                    </p>
+                  )}
+                </>
               )}
             </div>
           </div>

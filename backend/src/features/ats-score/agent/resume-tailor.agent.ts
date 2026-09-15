@@ -51,7 +51,7 @@ const resumeTailorZodSchema = z.object({
   tailoredJobTitle: z
     .string()
     .optional()
-    .describe('Optimized target professional headline/job title matching the target job description seniority and role, e.g. "Senior Angular Developer | TypeScript, RxJS & NgRx"'),
+    .describe('Optimized target professional headline/job title matching the target job description seniority and role, e.g. "Senior Financial Analyst | GAAP, Modeling & Budgeting" or "Senior Software Engineer | Cloud & Distributed Systems"'),
   tailoredSummary: z
     .string()
     .optional()
@@ -72,7 +72,7 @@ const resumeTailorZodSchema = z.object({
       z.object({
         id: z.string().optional().default('').describe('Original project/custom entry id'),
         heading: z.string().optional().default('').describe('Original project heading (must remain identical)'),
-        bullets: z.array(z.string()).default([]).describe('Enhanced bullet points emphasizing target tech stack and impact'),
+        bullets: z.array(z.string()).default([]).describe('Enhanced bullet points emphasizing target domain competencies, methodologies, and impact'),
       }),
     )
     .optional()

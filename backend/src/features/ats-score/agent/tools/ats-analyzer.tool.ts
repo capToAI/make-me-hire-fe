@@ -277,7 +277,12 @@ export class AtsAnalyzerTool {
    */
   formatSkillTitle(term: string): string {
     const trimmed = term.trim();
+    // Pure uppercase acronyms (AWS, GAAP, SQL, SEO, REST)
     if (/^[A-Z0-9+#.-]+$/.test(trimmed)) return trimmed;
+    // Mixed case / PascalCase / internal acronyms (NestJS, Next.js, PostgreSQL, QuickBooks, JavaScript)
+    if (/[a-z][A-Z]/.test(trimmed) || /[A-Z]{2,}/.test(trimmed)) {
+      return trimmed;
+    }
     return trimmed
       .split(/\s+/)
       .map((w) => (w.length <= 2 && !/[a-z]/.test(w) ? w : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()))
