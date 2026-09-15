@@ -83,6 +83,7 @@ export interface SuggestedSkillItem {
   name: string;
   reason: string;
   relevance: 'high' | 'medium' | 'low';
+  scoreImpact?: number;
   status: 'pending' | 'confirmed' | 'rejected';
 }
 
@@ -130,6 +131,18 @@ export class TailoredResumeResponseDto {
 
   @ApiProperty({ description: 'Suggested skills identified from job description requiring confirmation' })
   suggestedSkills!: SuggestedSkillItem[];
+
+  @ApiPropertyOptional({ description: 'Matched keywords identified from ATS evaluation', type: [String] })
+  matchedKeywords?: string[];
+
+  @ApiPropertyOptional({ description: 'Missing keywords identified from ATS evaluation', type: [String] })
+  missingKeywords?: string[];
+
+  @ApiPropertyOptional({ description: 'Matched skills identified from ATS evaluation', type: [String] })
+  matchedSkills?: string[];
+
+  @ApiPropertyOptional({ description: 'Missing skills identified from ATS evaluation', type: [String] })
+  missingSkills?: string[];
 
   @ApiProperty({ description: 'Target resume UUID' })
   resumeId!: string;

@@ -7,6 +7,7 @@ import {
   RESUME_TAILOR_SYSTEM_PROMPT,
   buildResumeTailorUserPrompt,
 } from '../prompt/resume-tailor.prompt';
+import { AtsAnalyzerTool } from './tools/ats-analyzer.tool';
 import { ResumeTailorTool } from './tools/resume-tailor.tool';
 import {
   SuggestedSkillItem,
@@ -15,11 +16,36 @@ import {
 } from '../models/resume-tailor.dto';
 import { isSkillCoveredByCandidate } from '../utils/skill-aliases';
 
-const changeItemSchema = z.object({
-  title: z.string().describe('Short headline of change made'),
-  description: z.string().describe('Detailed explanation of the change'),
-  impact: z.string().describe('Why this change improves ATS compatibility or recruiter reception'),
-});
+const flexibleChangeItemSchema = z.union([
+  z.string().transform((val) => ({
+    title: val,
+    description: `Aligned keyword '${val}' with target requirements`,
+    impact: 'Improves ATS keyword match and relevance score',
+  })),
+  z.record(z.any()).transform((obj) => ({
+    title: String(obj.title || obj.name || obj.headline || 'Improvement'),
+    description: String(obj.description || obj.details || obj.desc || 'Optimized for target job description'),
+    impact: String(obj.impact || obj.reason || 'Enhances ATS scannability and recruiter appeal'),
+  })),
+]);
+
+const flexibleSuggestedSkillSchema = z.union([
+  z.string().transform((name) => ({
+    name,
+    reason: 'Mentioned in job description as a desired capability',
+    relevance: 'medium' as const,
+  })),
+  z.record(z.any()).transform((obj) => {
+    const rawRelevance = String(obj.relevance || 'medium').toLowerCase();
+    const relevance: 'high' | 'medium' | 'low' =
+      rawRelevance === 'high' || rawRelevance === 'low' ? rawRelevance : 'medium';
+    return {
+      name: String(obj.name || obj.skill || obj.title || ''),
+      reason: String(obj.reason || obj.description || 'Desired capability from job description'),
+      relevance,
+    };
+  }),
+]);
 
 const resumeTailorZodSchema = z.object({
   tailoredJobTitle: z
@@ -33,10 +59,10 @@ const resumeTailorZodSchema = z.object({
   experienceBullets: z
     .array(
       z.object({
-        id: z.string().describe('Original experience entry id'),
-        company: z.string().describe('Original company name (must remain identical)'),
-        role: z.string().describe('Original job role (must remain identical)'),
-        bullets: z.array(z.string()).describe('Enhanced bullet points with active verbs and JD keywords'),
+        id: z.string().optional().default('').describe('Original experience entry id'),
+        company: z.string().optional().default('').describe('Original company name (must remain identical)'),
+        role: z.string().optional().default('').describe('Original job role (must remain identical)'),
+        bullets: z.array(z.string()).default([]).describe('Enhanced bullet points with active verbs and JD keywords'),
       }),
     )
     .optional()
@@ -44,9 +70,9 @@ const resumeTailorZodSchema = z.object({
   projectBullets: z
     .array(
       z.object({
-        id: z.string().describe('Original project/custom entry id'),
-        heading: z.string().describe('Original project heading (must remain identical)'),
-        bullets: z.array(z.string()).describe('Enhanced bullet points emphasizing target tech stack and impact'),
+        id: z.string().optional().default('').describe('Original project/custom entry id'),
+        heading: z.string().optional().default('').describe('Original project heading (must remain identical)'),
+        bullets: z.array(z.string()).default([]).describe('Enhanced bullet points emphasizing target tech stack and impact'),
       }),
     )
     .optional()
@@ -55,20 +81,16 @@ const resumeTailorZodSchema = z.object({
     .array(z.string())
     .describe('Optimized list of skills (containing candidate skills + user confirmed skills only)'),
   changes: z.object({
-    summary: z.array(changeItemSchema).describe('Summary changes'),
-    experience: z.array(changeItemSchema).describe('Experience changes'),
-    projects: z.array(changeItemSchema).optional().describe('Project changes'),
-    keywords: z.array(changeItemSchema).describe('Keyword changes'),
-    skills: z.array(changeItemSchema).describe('Skills changes'),
+    summary: z.array(flexibleChangeItemSchema).optional().default([]).describe('Summary changes'),
+    experience: z.array(flexibleChangeItemSchema).optional().default([]).describe('Experience changes'),
+    projects: z.array(flexibleChangeItemSchema).optional().default([]).describe('Project changes'),
+    keywords: z.array(flexibleChangeItemSchema).optional().default([]).describe('Keyword changes'),
+    skills: z.array(flexibleChangeItemSchema).optional().default([]).describe('Skills changes'),
   }),
   suggestedSkills: z
-    .array(
-      z.object({
-        name: z.string().describe('Missing skill name from job description'),
-        reason: z.string().describe('Why this skill is recommended based on the job description'),
-        relevance: z.enum(['high', 'medium', 'low']).describe('Skill criticality for this role'),
-      }),
-    )
+    .array(flexibleSuggestedSkillSchema)
+    .optional()
+    .default([])
     .describe('Skills required by the job description but not in candidate resume (requiring confirmation)'),
 });
 
@@ -84,7 +106,10 @@ export interface TailoredAgentResult {
 export class ResumeTailorAgent {
   private readonly logger = new Logger(ResumeTailorAgent.name);
 
-  constructor(private readonly tailorTool: ResumeTailorTool) {}
+  constructor(
+    private readonly tailorTool: ResumeTailorTool,
+    private readonly analyzerTool: AtsAnalyzerTool,
+  ) {}
 
   /**
    * Tailors a candidate's resume for a job description using LLM with deterministic fallback.
@@ -192,21 +217,30 @@ export class ResumeTailorAgent {
         }
       }
 
-      // 2. Merge experience bullets safely matching entry IDs
+      // 2. Merge experience bullets safely matching entry IDs, company, or role
       if (Array.isArray(result.experienceBullets)) {
         const bulletsMap = new Map<string, string[]>();
+        const bulletsByCompanyOrRole = new Map<string, string[]>();
         result.experienceBullets.forEach((item) => {
-          if (item.id && Array.isArray(item.bullets) && item.bullets.length > 0) {
-            bulletsMap.set(item.id, item.bullets);
+          if (item && Array.isArray(item.bullets) && item.bullets.length > 0) {
+            if (item.id) bulletsMap.set(item.id, item.bullets);
+            if (item.company) bulletsByCompanyOrRole.set(item.company.toLowerCase().trim(), item.bullets);
+            if (item.role) bulletsByCompanyOrRole.set(item.role.toLowerCase().trim(), item.bullets);
           }
         });
 
         for (const secId of sectionOrder) {
           const section = sections[secId];
           if (section?.type === 'experience' && Array.isArray(section.data?.entries)) {
-            section.data.entries.forEach((entry: any) => {
+            section.data.entries.forEach((entry: any, index: number) => {
               if (bulletsMap.has(entry.id)) {
                 entry.bullets = bulletsMap.get(entry.id)!;
+              } else if (entry.company && bulletsByCompanyOrRole.has(entry.company.toLowerCase().trim())) {
+                entry.bullets = bulletsByCompanyOrRole.get(entry.company.toLowerCase().trim())!;
+              } else if (entry.role && bulletsByCompanyOrRole.has(entry.role.toLowerCase().trim())) {
+                entry.bullets = bulletsByCompanyOrRole.get(entry.role.toLowerCase().trim())!;
+              } else if (result.experienceBullets && result.experienceBullets[index]?.bullets?.length) {
+                entry.bullets = result.experienceBullets[index].bullets;
               }
             });
           }
@@ -304,19 +338,61 @@ export class ResumeTailorAgent {
       const rejectedSet = new Set(rejectedSkills.map((s) => s.toLowerCase()));
       const confirmedSet = new Set(confirmedSkills.map((s) => s.toLowerCase()));
 
+      const totalEstimatedSkills = Math.max(
+        10,
+        (atsContext.matchedSkills?.length || 0) + (atsContext.missingSkills?.length || 0),
+      );
+
       const suggestedSkills: SuggestedSkillItem[] = (result.suggestedSkills || [])
         .filter((sk) => {
-          const nameLower = sk.name.toLowerCase();
+          if (!sk?.name || !sk.name.trim()) return false;
+          const nameLower = sk.name.toLowerCase().trim();
           if (confirmedSet.has(nameLower)) return false;
           if (isSkillCoveredByCandidate(sk.name, allKnownCandidateSkills)) return false;
           return true;
         })
-        .map((sk) => ({
-          name: sk.name,
-          reason: sk.reason,
-          relevance: sk.relevance,
-          status: rejectedSet.has(sk.name.toLowerCase()) ? 'rejected' : 'pending',
-        }));
+        .map((sk) => {
+          const scoreImpact = this.analyzerTool.calculateSkillMarginalImpact(
+            sk.name.trim(),
+            totalEstimatedSkills,
+            jobDescription,
+          );
+          return {
+            name: sk.name.trim(),
+            reason: sk.reason || 'Mentioned in job description as a desired capability',
+            relevance: sk.relevance || 'medium',
+            scoreImpact,
+            status: rejectedSet.has(sk.name.toLowerCase().trim()) ? 'rejected' : 'pending',
+          };
+        });
+
+      // Supplement from ATS context missing skills & keywords so candidate has complete gap visibility
+      const allContextMissing = [
+        ...(atsContext.missingSkills || []),
+        ...(atsContext.missingKeywords || []),
+      ];
+      for (const missingItem of allContextMissing) {
+        if (!missingItem || !missingItem.trim()) continue;
+        const norm = missingItem.toLowerCase().trim();
+        if (
+          !confirmedSet.has(norm) &&
+          !isSkillCoveredByCandidate(missingItem, allKnownCandidateSkills) &&
+          !suggestedSkills.some((s) => s.name.toLowerCase() === norm)
+        ) {
+          const scoreImpact = this.analyzerTool.calculateSkillMarginalImpact(
+            missingItem.trim(),
+            totalEstimatedSkills,
+            jobDescription,
+          );
+          suggestedSkills.push({
+            name: missingItem.trim(),
+            reason: 'Identified as a desired competency from target job description',
+            relevance: 'high',
+            scoreImpact,
+            status: rejectedSet.has(norm) ? 'rejected' : 'pending',
+          });
+        }
+      }
 
       const mapChanges = (items?: any[]): TailorChangeItem[] => {
         if (!Array.isArray(items)) return [];

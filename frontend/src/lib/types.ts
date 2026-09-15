@@ -175,6 +175,7 @@ export interface SuggestedSkill {
   name: string;
   reason: string;
   relevance: SkillRelevance;
+  scoreImpact?: number;
   status: SkillStatus;
 }
 
@@ -202,6 +203,10 @@ export interface TailoredResumeResponse {
   tailoredResumeData: ResumeState;
   changes: TailorChangesGroup;
   suggestedSkills: SuggestedSkill[];
+  matchedKeywords?: string[];
+  missingKeywords?: string[];
+  matchedSkills?: string[];
+  missingSkills?: string[];
   resumeId: string;
   resumeName: string;
   position: string;

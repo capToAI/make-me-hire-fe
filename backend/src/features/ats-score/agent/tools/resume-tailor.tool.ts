@@ -105,8 +105,8 @@ export class ResumeTailorTool {
     confirmedSkills: string[] = [],
     rejectedSkills: string[] = [],
   ): SuggestedSkillItem[] {
-    const jobSkills = this.analyzerTool.findSkills(jobDescription);
-    const resumeSkills = this.analyzerTool.findSkills(resumeText);
+    const jobSkills = this.analyzerTool.extractSkillsFromJobDescription(jobDescription);
+    const resumeSkills = this.analyzerTool.extractSkillsFromResume(resumeText);
     const allKnownSkills = [...resumeSkills, ...confirmedSkills];
     const rejectedLower = new Set(rejectedSkills.map((s) => s.toLowerCase()));
 
@@ -133,10 +133,17 @@ export class ResumeTailorTool {
         status = 'rejected';
       }
 
+      const scoreImpact = this.analyzerTool.calculateSkillMarginalImpact(
+        skill,
+        jobSkills.length,
+        jobDescription,
+      );
+
       return {
         name: skill,
         reason: `Explicitly mentioned in the job description (${occurrences} time${occurrences > 1 ? 's' : ''}) as a desired capability.`,
         relevance,
+        scoreImpact,
         status,
       };
     });
@@ -163,7 +170,7 @@ export class ResumeTailorTool {
     const keywordChanges: TailorChangeItem[] = [];
     const skillChanges: TailorChangeItem[] = [];
 
-    const jobSkills = this.analyzerTool.findSkills(jobDescription);
+    const jobSkills = this.analyzerTool.extractSkillsFromJobDescription(jobDescription);
     const jobTokens = Array.from(this.analyzerTool.extractTokens(jobDescription));
 
     // 1. Process Skills Section

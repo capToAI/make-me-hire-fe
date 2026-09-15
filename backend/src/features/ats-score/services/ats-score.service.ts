@@ -12,6 +12,7 @@ import { Repository } from 'typeorm';
 import { Account } from '../../users/entities/account.entity';
 import { User } from '../../users/entities/user.entity';
 import { Resume } from '../../resumes/entities/resume.entity';
+import { AtsAnalyzerTool } from '../agent/tools/ats-analyzer.tool';
 import { AtsCheckAgent } from '../agent/ats-check.agent';
 import { ResumeTailorAgent } from '../agent/resume-tailor.agent';
 import { AtsScoreResponseDto } from '../models/ats-score-response.dto';
@@ -39,6 +40,7 @@ export class AtsScoreService {
     private readonly accountRepository: Repository<Account>,
     private readonly atsCheckAgent: AtsCheckAgent,
     private readonly resumeTailorAgent: ResumeTailorAgent,
+    private readonly analyzerTool: AtsAnalyzerTool,
   ) {}
 
   /**
@@ -239,6 +241,63 @@ export class AtsScoreService {
   }
 
   /**
+   * Extracts all explicit candidate skills, technologies, and certifications directly
+   * from the resume JSON state across any profession (tech, healthcare, accounting, etc.).
+   */
+  extractExplicitCandidateSkills(data: any): string[] {
+    if (!data || typeof data !== 'object') return [];
+
+    const skills = new Set<string>();
+    const sections = data.sections || {};
+
+    Object.values(sections).forEach((section: any) => {
+      if (!section) return;
+
+      // 1. Skills section items
+      if (section.type === 'skills' && Array.isArray(section.data?.items)) {
+        section.data.items.forEach((item: any) => {
+          if (typeof item === 'string' && item.trim()) {
+            skills.add(item.trim());
+          }
+        });
+      }
+
+      // 2. Projects technology tags
+      if (section.type === 'projects' && Array.isArray(section.data?.entries)) {
+        section.data.entries.forEach((entry: any) => {
+          if (Array.isArray(entry.technologies)) {
+            entry.technologies.forEach((tech: any) => {
+              if (typeof tech === 'string' && tech.trim()) {
+                skills.add(tech.trim());
+              }
+            });
+          }
+        });
+      }
+
+      // 3. Certifications titles/names
+      if (section.type === 'certifications' && Array.isArray(section.data?.entries)) {
+        section.data.entries.forEach((entry: any) => {
+          if (typeof entry.name === 'string' && entry.name.trim()) {
+            skills.add(entry.name.trim());
+          }
+        });
+      }
+
+      // 4. Custom section headings or items if designated as skills/tools
+      if (section.type === 'custom' && Array.isArray(section.data?.entries)) {
+        section.data.entries.forEach((entry: any) => {
+          if (typeof entry.heading === 'string' && entry.heading.trim().length <= 40) {
+            skills.add(entry.heading.trim());
+          }
+        });
+      }
+    });
+
+    return Array.from(skills);
+  }
+
+  /**
    * Conducts a complete ATS score evaluation for a user's resume against a job description.
    * Validates authentication and resume ownership before invoking the AI agent.
    *
@@ -268,6 +327,7 @@ export class AtsScoreService {
     }
 
     const structuredResumeText = this.convertResumeToStructuredText(resume.data);
+    const explicitSkills = this.extractExplicitCandidateSkills(resume.data);
 
     if (!structuredResumeText.trim()) {
       this.logger.warn(`Resume ${dto.resumeId} has empty content`);
@@ -284,6 +344,7 @@ export class AtsScoreService {
         name: resume.name,
         position: resume.position,
       },
+      explicitSkills,
     );
 
     return {
@@ -335,6 +396,7 @@ export class AtsScoreService {
 
     // 1. Calculate baseline ATS score of original resume against the job description
     const originalResumeText = this.convertResumeToStructuredText(resume.data);
+    const originalExplicitSkills = this.extractExplicitCandidateSkills(resume.data);
     const originalAnalysis = await this.atsCheckAgent.analyzeResume(
       originalResumeText,
       dto.jobDescription,
@@ -342,6 +404,7 @@ export class AtsScoreService {
         name: resume.name,
         position: resume.position,
       },
+      originalExplicitSkills,
     );
 
     // 2. Invoke Resume Tailoring Agent with full matched and missing context
@@ -375,6 +438,9 @@ export class AtsScoreService {
     const tailoredResumeText = this.convertResumeToStructuredText(
       tailoredAgentResult.tailoredResumeData,
     );
+    const tailoredExplicitSkills = this.extractExplicitCandidateSkills(
+      tailoredAgentResult.tailoredResumeData,
+    );
 
     // Extract tailored position from basic section if updated to secure title bonus
     let tailoredPosition = resume.position;
@@ -392,13 +458,31 @@ export class AtsScoreService {
         name: resume.name,
         position: tailoredPosition,
       },
+      tailoredExplicitSkills,
     );
 
-    // Ensure tailored score reflects improvements while being bounded
-    let tailoredScore = Math.max(originalAnalysis.score, tailoredAnalysis.score);
-    // If user confirmed skills were added or content was enhanced, guarantee a positive ATS boost if reasonable
-    if ((dto.confirmedSkills && dto.confirmedSkills.length > 0) && tailoredScore <= originalAnalysis.score) {
-      tailoredScore = Math.min(98, originalAnalysis.score + dto.confirmedSkills.length * 4);
+    // Calculate authentic confirmed skill score impact from the ATS analyzer
+    let confirmedSkillsImpact = 0;
+    if (Array.isArray(dto.confirmedSkills) && dto.confirmedSkills.length > 0) {
+      const totalEstimatedSkills = Math.max(
+        10,
+        (originalAnalysis.matchedSkills?.length || 0) + (originalAnalysis.missingSkills?.length || 0),
+      );
+      dto.confirmedSkills.forEach((skill) => {
+        confirmedSkillsImpact += this.analyzerTool.calculateSkillMarginalImpact(
+          skill,
+          totalEstimatedSkills,
+          dto.jobDescription,
+        );
+      });
+    }
+
+    // Determine final tailored score:
+    // Tailored score reflects authentic baseline score plus exact marginal point impact of confirmed skills
+    const baseProgressScore = Math.max(originalAnalysis.score, tailoredAnalysis.score);
+    let tailoredScore = baseProgressScore;
+    if (confirmedSkillsImpact > 0) {
+      tailoredScore = Math.min(98, originalAnalysis.score + confirmedSkillsImpact);
     }
     tailoredScore = Math.max(0, Math.min(100, tailoredScore));
     const scoreDifference = tailoredScore - originalAnalysis.score;
@@ -413,6 +497,18 @@ export class AtsScoreService {
       tailoredResumeData: tailoredAgentResult.tailoredResumeData,
       changes: tailoredAgentResult.changes,
       suggestedSkills: tailoredAgentResult.suggestedSkills,
+      matchedKeywords: tailoredAnalysis.matchedKeywords?.length
+        ? tailoredAnalysis.matchedKeywords
+        : originalAnalysis.matchedKeywords,
+      missingKeywords: tailoredAnalysis.missingKeywords?.length
+        ? tailoredAnalysis.missingKeywords
+        : originalAnalysis.missingKeywords,
+      matchedSkills: tailoredAnalysis.matchedSkills?.length
+        ? tailoredAnalysis.matchedSkills
+        : originalAnalysis.matchedSkills,
+      missingSkills: tailoredAnalysis.missingSkills?.length
+        ? tailoredAnalysis.missingSkills
+        : originalAnalysis.missingSkills,
       resumeId: resume.id,
       resumeName: resume.name,
       position: tailoredPosition,

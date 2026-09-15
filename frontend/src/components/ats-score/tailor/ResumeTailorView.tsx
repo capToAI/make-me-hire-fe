@@ -40,8 +40,12 @@ export function ResumeTailorView({
   const [isChangesExpanded, setIsChangesExpanded] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Extract tailored skills from tailoredResumeData for the matched keywords list
+  // Extract matched keywords: prioritize tailoredResult.matchedKeywords from ATS evaluation
   const matchedKeywords = useMemo(() => {
+    if (Array.isArray(tailoredResult.matchedKeywords) && tailoredResult.matchedKeywords.length > 0) {
+      return tailoredResult.matchedKeywords;
+    }
+
     const tailoredSkillsSection = Object.values(
       tailoredResult.tailoredResumeData.sections || {}
     ).find((sec) => sec.type === "skills");
@@ -65,10 +69,19 @@ export function ResumeTailorView({
     ).filter(Boolean);
   }, [tailoredResult]);
 
-  // Missing skills from suggestedSkills
+  // Missing skills: prioritize suggestedSkills, fallback to missingSkills / missingKeywords
   const missingSkills = useMemo(() => {
-    return (tailoredResult.suggestedSkills || []).map((s) => s.name);
-  }, [tailoredResult.suggestedSkills]);
+    if (Array.isArray(tailoredResult.suggestedSkills) && tailoredResult.suggestedSkills.length > 0) {
+      return tailoredResult.suggestedSkills.map((s) => s.name);
+    }
+    if (Array.isArray(tailoredResult.missingSkills) && tailoredResult.missingSkills.length > 0) {
+      return tailoredResult.missingSkills;
+    }
+    if (Array.isArray(tailoredResult.missingKeywords) && tailoredResult.missingKeywords.length > 0) {
+      return tailoredResult.missingKeywords;
+    }
+    return [];
+  }, [tailoredResult]);
 
   // Toggle staging of a missing skill
   const handleToggleSkill = (skillName: string) => {
@@ -94,10 +107,28 @@ export function ResumeTailorView({
     }
   };
 
-  // Predicted score calculation when keywords are staged
+  // Map of skill name to its authentic marginal scoreImpact from ATS evaluation
+  const skillImpactMap = useMemo(() => {
+    const map = new Map<string, number>();
+    (tailoredResult.suggestedSkills || []).forEach((s) => {
+      if (s.name) {
+        map.set(s.name.toLowerCase().trim(), s.scoreImpact ?? 3);
+      }
+    });
+    return map;
+  }, [tailoredResult.suggestedSkills]);
+
+  const getSkillImpact = (skillName: string): number => {
+    return skillImpactMap.get(skillName.toLowerCase().trim()) ?? 3;
+  };
+
+  // Predicted score calculation summing authentic scoreImpact of staged keywords
   const stagedCount = stagedSkills.length;
-  const estimatedGain = stagedCount * 5;
-  const predictedScore = Math.min(100, tailoredResult.tailoredScore + estimatedGain);
+  const estimatedGain = useMemo(() => {
+    return stagedSkills.reduce((sum, skill) => sum + getSkillImpact(skill), 0);
+  }, [stagedSkills, skillImpactMap]);
+
+  const predictedScore = Math.min(98, tailoredResult.tailoredScore + estimatedGain);
 
   const totalChangesCount =
     (tailoredResult.changes?.summary?.length || 0) +
@@ -294,6 +325,7 @@ export function ResumeTailorView({
                   <div className="flex flex-wrap gap-1.5">
                     {missingSkills.map((skill, i) => {
                       const isStaged = stagedSkills.includes(skill);
+                      const impact = getSkillImpact(skill);
                       return (
                         <button
                           key={i}
@@ -306,6 +338,15 @@ export function ResumeTailorView({
                           }`}
                         >
                           <span>{skill}</span>
+                          <span
+                            className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                              isStaged
+                                ? "bg-indigo-200/70 text-indigo-900"
+                                : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+                            }`}
+                          >
+                            +{impact}
+                          </span>
                           {isStaged ? (
                             <X className="h-3 w-3 text-indigo-600" />
                           ) : (
