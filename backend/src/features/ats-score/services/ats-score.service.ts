@@ -525,6 +525,9 @@ export class AtsScoreService {
       if (existing) {
         existing.data = tailoredAgentResult.tailoredResumeData;
         existing.position = tailoredPosition;
+        if (dto.atsEvaluationId) {
+          existing.ats_evaluation_id = dto.atsEvaluationId;
+        }
         existing.updated_at = new Date();
         savedTailoredResume = await this.resumeRepository.save(existing);
         this.logger.log(
@@ -539,6 +542,7 @@ export class AtsScoreService {
           data: tailoredAgentResult.tailoredResumeData,
           resume_type: 'tailored',
           parent_resume_id: resume.id,
+          ats_evaluation_id: dto.atsEvaluationId || null,
         });
         savedTailoredResume = await this.resumeRepository.save(newRecord);
         this.logger.log(
@@ -554,6 +558,7 @@ export class AtsScoreService {
         data: tailoredAgentResult.tailoredResumeData,
         resume_type: 'tailored',
         parent_resume_id: resume.id,
+        ats_evaluation_id: dto.atsEvaluationId || null,
       });
       savedTailoredResume = await this.resumeRepository.save(newRecord);
       this.logger.log(
@@ -585,6 +590,8 @@ export class AtsScoreService {
         : originalAnalysis.missingSkills,
       resumeId: resume.id,
       tailoredResumeId: savedTailoredResume.id,
+      atsEvaluationId:
+        savedTailoredResume.ats_evaluation_id || dto.atsEvaluationId || undefined,
       resumeName: resume.name,
       position: tailoredPosition,
       tailoredAt: savedTailoredResume.updated_at

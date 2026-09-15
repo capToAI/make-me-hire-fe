@@ -219,6 +219,7 @@ export class ResumesService {
       updatedAt: resume.updated_at,
       resumeType: resume.resume_type || 'base',
       parentResumeId: resume.parent_resume_id || null,
+      atsEvaluationId: resume.ats_evaluation_id || null,
     }));
   }
 
@@ -339,6 +340,7 @@ export class ResumesService {
       updatedAt: resume.updated_at,
       resumeType: resume.resume_type || 'base',
       parentResumeId: resume.parent_resume_id || null,
+      atsEvaluationId: resume.ats_evaluation_id || null,
     };
   }
 }

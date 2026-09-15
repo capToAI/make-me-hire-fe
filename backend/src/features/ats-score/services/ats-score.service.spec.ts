@@ -7,6 +7,7 @@ import { Repository } from 'typeorm';
 import { Account } from '../../users/entities/account.entity';
 import { User } from '../../users/entities/user.entity';
 import { Resume } from '../../resumes/entities/resume.entity';
+import { AtsEvaluation } from '../entities/ats-evaluation.entity';
 import { AtsCheckAgent } from '../agent/ats-check.agent';
 import { ResumeTailorAgent } from '../agent/resume-tailor.agent';
 import { AtsAnalyzerTool } from '../agent/tools/ats-analyzer.tool';
@@ -18,6 +19,7 @@ describe('AtsScoreService', () => {
   let mockResumeRepo: Partial<Record<keyof Repository<Resume>, jest.Mock>>;
   let mockUserRepo: Partial<Record<keyof Repository<User>, jest.Mock>>;
   let mockAccountRepo: Partial<Record<keyof Repository<Account>, jest.Mock>>;
+  let mockAtsEvaluationRepo: Partial<Record<keyof Repository<AtsEvaluation>, jest.Mock>>;
 
   const mockUser: User = {
     id: 1,
@@ -63,6 +65,9 @@ describe('AtsScoreService', () => {
     created_at: new Date(),
     updated_at: new Date(),
     user: mockUser,
+    resume_type: 'base',
+    parent_resume_id: null,
+    ats_evaluation_id: null,
   };
 
   beforeEach(async () => {
@@ -91,6 +96,14 @@ describe('AtsScoreService', () => {
       findOne: jest.fn().mockResolvedValue(null),
     };
 
+    mockAtsEvaluationRepo = {
+      create: jest.fn().mockImplementation((dto) => ({ id: 'eval-uuid-1', ...dto })),
+      save: jest.fn().mockImplementation(async (entity) => ({ id: 'eval-uuid-1', ...entity })),
+      find: jest.fn().mockResolvedValue([]),
+      findOne: jest.fn().mockResolvedValue(null),
+      delete: jest.fn().mockResolvedValue({ affected: 1 }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AtsScoreService,
@@ -109,6 +122,10 @@ describe('AtsScoreService', () => {
         {
           provide: getRepositoryToken(Account),
           useValue: mockAccountRepo,
+        },
+        {
+          provide: getRepositoryToken(AtsEvaluation),
+          useValue: mockAtsEvaluationRepo,
         },
       ],
     }).compile();

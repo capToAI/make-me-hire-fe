@@ -37,6 +37,9 @@ export class Resume {
   @Column({ name: 'parent_resume_id', type: 'uuid', nullable: true })
   parent_resume_id?: string | null;
 
+  @Column({ name: 'ats_evaluation_id', type: 'uuid', nullable: true })
+  ats_evaluation_id?: string | null;
+
   @CreateDateColumn({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;
 

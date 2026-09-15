@@ -516,7 +516,8 @@ export async function tailorResume(
   jobDescription: string,
   confirmedSkills: string[] = [],
   rejectedSkills: string[] = [],
-  tailoredResumeId?: string
+  tailoredResumeId?: string,
+  atsEvaluationId?: string
 ): Promise<{ success: boolean; data?: TailoredResumeResponse; error?: string }> {
   const trimmedJd = (jobDescription || "").trim();
   if (!resumeId) {
@@ -536,6 +537,7 @@ export async function tailorResume(
         confirmedSkills,
         rejectedSkills,
         tailoredResumeId,
+        atsEvaluationId,
       }),
     });
 

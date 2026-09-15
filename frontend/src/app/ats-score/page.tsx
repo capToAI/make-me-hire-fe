@@ -217,15 +217,15 @@ function AtsScoreContent() {
       return;
     }
 
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("tailor_target_resume_id", selectedResume.id);
-      sessionStorage.setItem("tailor_target_job_desc", jobDescription.trim());
-      sessionStorage.setItem("tailor_auto_start", "true");
+    if (atsResult?.id) {
+      router.push(
+        `/tailor?evaluationId=${encodeURIComponent(atsResult.id)}&autoTailor=true`,
+      );
+    } else {
+      router.push(
+        `/tailor?resumeId=${encodeURIComponent(selectedResume.id)}&autoTailor=true`,
+      );
     }
-
-    router.push(
-      `/tailor?resumeId=${encodeURIComponent(selectedResume.id)}&autoTailor=true`,
-    );
   };
 
   // 4. Handle Skill Recalculation

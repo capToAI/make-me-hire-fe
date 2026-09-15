@@ -60,6 +60,14 @@ export class TailorResumeDto {
   @IsOptional()
   @IsUUID('4', { message: 'tailoredResumeId must be a valid UUID v4' })
   tailoredResumeId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Optional ATS Evaluation UUID that initiated this tailoring request',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @IsOptional()
+  @IsUUID('4', { message: 'atsEvaluationId must be a valid UUID v4' })
+  atsEvaluationId?: string;
 }
 
 /**
@@ -157,6 +165,9 @@ export class TailoredResumeResponseDto {
 
   @ApiPropertyOptional({ description: 'Persisted tailored resume record UUID in resumes table' })
   tailoredResumeId?: string;
+
+  @ApiPropertyOptional({ description: 'ATS Evaluation UUID linked to this tailored resume' })
+  atsEvaluationId?: string;
 
   @ApiProperty({ description: 'Target resume name' })
   resumeName!: string;

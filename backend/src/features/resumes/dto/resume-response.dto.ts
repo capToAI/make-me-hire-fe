@@ -31,6 +31,9 @@ export class ResumeResponseDto {
 
   @ApiProperty({ example: null, nullable: true })
   parentResumeId?: string | null;
+
+  @ApiProperty({ example: null, nullable: true })
+  atsEvaluationId?: string | null;
 }
 
 /**
@@ -60,5 +63,8 @@ export class ResumeListItemDto {
 
   @ApiProperty({ example: null, nullable: true })
   parentResumeId?: string | null;
+
+  @ApiProperty({ example: null, nullable: true })
+  atsEvaluationId?: string | null;
 }
 

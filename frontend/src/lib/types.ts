@@ -135,6 +135,7 @@ export interface SavedResume {
   updatedAt: string;
   resumeType?: "base" | "tailored";
   parentResumeId?: string | null;
+  atsEvaluationId?: string | null;
 }
 
 export interface ResumeListItem {
@@ -146,6 +147,7 @@ export interface ResumeListItem {
   updatedAt: string;
   resumeType?: "base" | "tailored";
   parentResumeId?: string | null;
+  atsEvaluationId?: string | null;
 }
 
 export type AtsMatchRank =
@@ -238,6 +240,7 @@ export interface TailoredResumeResponse {
   missingSkills?: string[];
   resumeId: string;
   tailoredResumeId?: string;
+  atsEvaluationId?: string;
   resumeName: string;
   position: string;
   tailoredAt: string;

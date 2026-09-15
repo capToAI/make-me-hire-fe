@@ -61,6 +61,7 @@ export async function POST(request: Request) {
           ? body.rejectedSkills
           : [],
         tailoredResumeId: body.tailoredResumeId || undefined,
+        atsEvaluationId: body.atsEvaluationId || undefined,
       }),
     });
 
