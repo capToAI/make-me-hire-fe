@@ -152,6 +152,7 @@ export type AtsMatchRank =
   | "Low Match";
 
 export interface AtsScoreData {
+  id?: string;
   score: number;
   rank: AtsMatchRank;
   summary: string;
@@ -166,6 +167,30 @@ export interface AtsScoreData {
   resumeName: string;
   position: string;
   analyzedAt: string;
+}
+
+export interface AtsEvaluationRecord {
+  id: string;
+  userId: number;
+  resumeId: string;
+  jobTitle: string;
+  jobDescription: string;
+  score: number;
+  rank: AtsMatchRank;
+  summary: string;
+  matchedKeywords: string[];
+  missingKeywords: string[];
+  matchedSkills: string[];
+  missingSkills: string[];
+  strengths: string[];
+  improvements: string[];
+  recommendations: string[];
+  createdAt: string;
+  resume?: {
+    id: string;
+    name: string;
+    position: string;
+  };
 }
 
 export type SkillRelevance = "high" | "medium" | "low";

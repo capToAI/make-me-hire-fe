@@ -12,6 +12,7 @@ import { Repository } from 'typeorm';
 import { Account } from '../../users/entities/account.entity';
 import { User } from '../../users/entities/user.entity';
 import { Resume } from '../../resumes/entities/resume.entity';
+import { AtsEvaluation } from '../entities/ats-evaluation.entity';
 import { AtsAnalyzerTool } from '../agent/tools/ats-analyzer.tool';
 import { AtsCheckAgent } from '../agent/ats-check.agent';
 import { ResumeTailorAgent } from '../agent/resume-tailor.agent';
@@ -38,6 +39,8 @@ export class AtsScoreService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Account)
     private readonly accountRepository: Repository<Account>,
+    @InjectRepository(AtsEvaluation)
+    private readonly atsEvaluationRepository: Repository<AtsEvaluation>,
     private readonly atsCheckAgent: AtsCheckAgent,
     private readonly resumeTailorAgent: ResumeTailorAgent,
     private readonly analyzerTool: AtsAnalyzerTool,
@@ -347,7 +350,29 @@ export class AtsScoreService {
       explicitSkills,
     );
 
+    // Persist ATS evaluation to history
+    const evaluation = this.atsEvaluationRepository.create({
+      userId: user.id,
+      resumeId: resume.id,
+      jobTitle: resume.position || 'Target Role',
+      jobDescription: dto.jobDescription,
+      score: analysis.score,
+      rank: analysis.rank,
+      summary: analysis.summary,
+      matchedKeywords: analysis.matchedKeywords || [],
+      missingKeywords: analysis.missingKeywords || [],
+      matchedSkills: analysis.matchedSkills || [],
+      missingSkills: analysis.missingSkills || [],
+      strengths: analysis.strengths || [],
+      improvements: analysis.improvements || [],
+      recommendations: analysis.recommendations || [],
+    });
+
+    const savedEvaluation = await this.atsEvaluationRepository.save(evaluation);
+    this.logger.log(`Persisted ATS evaluation ${savedEvaluation.id} for Resume ${resume.id}`);
+
     return {
+      id: savedEvaluation.id,
       score: analysis.score,
       rank: analysis.rank,
       summary: analysis.summary,
@@ -361,7 +386,9 @@ export class AtsScoreService {
       resumeId: resume.id,
       resumeName: resume.name,
       position: resume.position,
-      analyzedAt: new Date().toISOString(),
+      analyzedAt: savedEvaluation.createdAt
+        ? savedEvaluation.createdAt.toISOString()
+        : new Date().toISOString(),
     };
   }
 
@@ -558,5 +585,81 @@ export class AtsScoreService {
     this.logger.log(`Successfully applied tailored resume ${resume.id} for user ${user.id}`);
     return saved;
   }
+
+  /**
+   * Retrieves ATS evaluation history for an authenticated user, optionally filtered by resume.
+   */
+  async getEvaluationHistory(
+    userIdentifier: string | number,
+    resumeId?: string,
+    limit: number = 20,
+  ): Promise<AtsEvaluation[]> {
+    const user = await this.resolveUser(userIdentifier);
+
+    const query = this.atsEvaluationRepository
+      .createQueryBuilder('eval')
+      .leftJoinAndSelect('eval.resume', 'resume')
+      .where('eval.userId = :userId', { userId: user.id })
+      .orderBy('eval.createdAt', 'DESC')
+      .take(Math.min(Math.max(1, limit), 50));
+
+    if (resumeId) {
+      query.andWhere('eval.resumeId = :resumeId', { resumeId });
+    }
+
+    return query.getMany();
+  }
+
+  /**
+   * Retrieves a specific saved ATS evaluation by its UUID, enforcing user ownership.
+   */
+  async getEvaluationById(
+    userIdentifier: string | number,
+    evaluationId: string,
+  ): Promise<AtsEvaluation> {
+    const user = await this.resolveUser(userIdentifier);
+
+    const evaluation = await this.atsEvaluationRepository.findOne({
+      where: { id: evaluationId },
+      relations: ['resume'],
+    });
+
+    if (!evaluation) {
+      throw new NotFoundException(`Evaluation with ID ${evaluationId} was not found`);
+    }
+
+    if (evaluation.userId !== user.id) {
+      throw new ForbiddenException('You do not have permission to view this evaluation');
+    }
+
+    return evaluation;
+  }
+
+  /**
+   * Deletes a saved ATS evaluation record, enforcing user ownership.
+   */
+  async deleteEvaluation(
+    userIdentifier: string | number,
+    evaluationId: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const user = await this.resolveUser(userIdentifier);
+
+    const evaluation = await this.atsEvaluationRepository.findOne({
+      where: { id: evaluationId },
+    });
+
+    if (!evaluation) {
+      throw new NotFoundException(`Evaluation with ID ${evaluationId} was not found`);
+    }
+
+    if (evaluation.userId !== user.id) {
+      throw new ForbiddenException('You do not have permission to delete this evaluation');
+    }
+
+    await this.atsEvaluationRepository.remove(evaluation);
+    this.logger.log(`Deleted ATS evaluation ${evaluationId} for user ${user.id}`);
+    return { success: true, message: 'Evaluation deleted successfully' };
+  }
 }
+
 

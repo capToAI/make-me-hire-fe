@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
@@ -14,8 +14,15 @@ import {
   RefreshCw,
   Sparkles,
 } from "lucide-react";
-import { checkAtsScore, fetchUserResumes, tailorResume } from "@/lib/api";
+import {
+  checkAtsScore,
+  deleteAtsEvaluation,
+  fetchAtsHistory,
+  fetchUserResumes,
+  tailorResume,
+} from "@/lib/api";
 import type {
+  AtsEvaluationRecord,
   AtsScoreData,
   ResumeListItem,
   TailoredResumeResponse,
@@ -24,6 +31,7 @@ import { UserMenu } from "@/components/auth/UserMenu";
 import { ResumeSelector } from "@/components/ats-score/ResumeSelector";
 import { JobDescriptionInput } from "@/components/ats-score/JobDescriptionInput";
 import { AtsScoreResult } from "@/components/ats-score/AtsScoreResult";
+import { EvaluationHistory } from "@/components/ats-score/EvaluationHistory";
 import { TailorProgressState } from "@/components/ats-score/tailor/TailorProgressState";
 import { ResumeTailorView } from "@/components/ats-score/tailor/ResumeTailorView";
 
@@ -53,6 +61,10 @@ function AtsScoreContent() {
   const [lastAnalyzedJobDesc, setLastAnalyzedJobDesc] = useState<string | null>(
     null,
   );
+
+  // ATS Evaluation History state
+  const [history, setHistory] = useState<AtsEvaluationRecord[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   const isAuthenticated = status === "authenticated";
   const isLoadingAuth = status === "loading";
@@ -91,6 +103,66 @@ function AtsScoreContent() {
     };
   }, [isAuthenticated, searchParams]);
 
+  // Load ATS History for the current selected resume
+  const loadHistory = useCallback(
+    async (resumeId?: string) => {
+      if (!isAuthenticated) return;
+      setIsLoadingHistory(true);
+      try {
+        const res = await fetchAtsHistory(resumeId);
+        if (res.success && res.data) {
+          setHistory(res.data);
+        }
+      } catch (e) {
+        console.error("Failed to load ATS history:", e);
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    },
+    [isAuthenticated],
+  );
+
+  useEffect(() => {
+    if (selectedResume?.id) {
+      loadHistory(selectedResume.id);
+    } else {
+      setHistory([]);
+    }
+  }, [selectedResume?.id, loadHistory]);
+
+  const onSelectHistoryEvaluation = (item: AtsEvaluationRecord) => {
+    setAtsResult({
+      id: item.id,
+      score: item.score,
+      rank: item.rank,
+      summary: item.summary,
+      matchedKeywords: item.matchedKeywords || [],
+      missingKeywords: item.missingKeywords || [],
+      matchedSkills: item.matchedSkills || [],
+      missingSkills: item.missingSkills || [],
+      strengths: item.strengths || [],
+      improvements: item.improvements || [],
+      recommendations: item.recommendations || [],
+      resumeId: item.resumeId,
+      resumeName: selectedResume?.name || item.resume?.name || "Selected Resume",
+      position: item.jobTitle || selectedResume?.position || "Target Role",
+      analyzedAt: item.createdAt,
+    });
+    setJobDescription(item.jobDescription);
+    setLastAnalyzedResumeId(item.resumeId);
+    setLastAnalyzedJobDesc(item.jobDescription);
+  };
+
+  const onDeleteHistoryEvaluation = async (id: string) => {
+    const res = await deleteAtsEvaluation(id);
+    if (res.success) {
+      setHistory((prev) => prev.filter((item) => item.id !== id));
+      if (atsResult?.id === id) {
+        setAtsResult(null);
+      }
+    }
+  };
+
   // 2. Handle ATS Score Check action
   const onClickCheckScore = async () => {
     setErrorMessage(null);
@@ -117,6 +189,8 @@ function AtsScoreContent() {
         setAtsResult(res.data);
         setLastAnalyzedResumeId(selectedResume.id);
         setLastAnalyzedJobDesc(jobDescription.trim());
+        // Automatically refresh history to display the newly saved check
+        loadHistory(selectedResume.id);
       } else {
         setErrorMessage(
           res.error || "Unable to complete ATS analysis. Please retry.",
@@ -338,65 +412,76 @@ function AtsScoreContent() {
 
             {/* 2-Column Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-              {/* Left Column: Input Card */}
-              <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-xs flex flex-col justify-between space-y-5">
-                {/* Resume Selector */}
-                <div className="space-y-2">
-                  <label className="text-xs sm:text-sm font-bold text-slate-800 block">
-                    Resume to check
-                  </label>
-                  <ResumeSelector
-                    resumes={resumes}
-                    selectedResumeId={selectedResume?.id || null}
-                    onSelectResume={(resume) => {
-                      setSelectedResume(resume);
+              {/* Left Column: Input Card & Past Evaluations */}
+              <div className="space-y-6">
+                <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-xs flex flex-col justify-between space-y-5">
+                  {/* Resume Selector */}
+                  <div className="space-y-2">
+                    <label className="text-xs sm:text-sm font-bold text-slate-800 block">
+                      Resume to check
+                    </label>
+                    <ResumeSelector
+                      resumes={resumes}
+                      selectedResumeId={selectedResume?.id || null}
+                      onSelectResume={(resume) => {
+                        setSelectedResume(resume);
+                        setErrorMessage(null);
+                      }}
+                      isLoading={isLoadingResumes}
+                    />
+                  </div>
+
+                  {/* Job Description Input */}
+                  <JobDescriptionInput
+                    value={jobDescription}
+                    onChange={(val) => {
+                      setJobDescription(val);
                       setErrorMessage(null);
                     }}
-                    isLoading={isLoadingResumes}
+                    disabled={isAnalyzing}
                   />
+
+                  {/* Action Button */}
+                  <div className="pt-1">
+                    {isAnalyzing ? (
+                      <button
+                        type="button"
+                        disabled
+                        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-50 border border-indigo-200 py-3 text-xs sm:text-sm font-semibold text-indigo-700 cursor-wait shadow-2xs"
+                      >
+                        <RefreshCw className="h-4 w-4 animate-spin text-indigo-600" />
+                        <span>Analyzing Resume...</span>
+                      </button>
+                    ) : isAnalyzedAndUnchanged ? (
+                      <div className="w-full rounded-xl bg-slate-50 border border-dashed border-slate-200 py-3 text-center text-xs sm:text-sm font-medium text-slate-400 select-none">
+                        Checked. Edit the job description to check again
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={onClickCheckScore}
+                        disabled={
+                          !selectedResume ||
+                          !jobDescription.trim() ||
+                          jobDescription.trim().length < 20
+                        }
+                        className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white hover:bg-indigo-50/80 hover:border-indigo-300 py-3 text-xs sm:text-sm font-semibold text-slate-700 hover:text-indigo-700 transition-all cursor-pointer shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Gauge className="h-4 w-4 text-indigo-600" />
+                        <span>Check ATS Score</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                {/* Job Description Input */}
-                <JobDescriptionInput
-                  value={jobDescription}
-                  onChange={(val) => {
-                    setJobDescription(val);
-                    setErrorMessage(null);
-                  }}
-                  disabled={isAnalyzing}
+                {/* Historical ATS Evaluations */}
+                <EvaluationHistory
+                  history={history}
+                  isLoading={isLoadingHistory}
+                  selectedEvaluationId={atsResult?.id}
+                  onSelectEvaluation={onSelectHistoryEvaluation}
+                  onDeleteEvaluation={onDeleteHistoryEvaluation}
                 />
-
-                {/* Action Button */}
-                <div className="pt-1">
-                  {isAnalyzing ? (
-                    <button
-                      type="button"
-                      disabled
-                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-50 border border-indigo-200 py-3 text-xs sm:text-sm font-semibold text-indigo-700 cursor-wait shadow-2xs"
-                    >
-                      <RefreshCw className="h-4 w-4 animate-spin text-indigo-600" />
-                      <span>Analyzing Resume...</span>
-                    </button>
-                  ) : isAnalyzedAndUnchanged ? (
-                    <div className="w-full rounded-xl bg-slate-50 border border-dashed border-slate-200 py-3 text-center text-xs sm:text-sm font-medium text-slate-400 select-none">
-                      Checked. Edit the job description to check again
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={onClickCheckScore}
-                      disabled={
-                        !selectedResume ||
-                        !jobDescription.trim() ||
-                        jobDescription.trim().length < 20
-                      }
-                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white hover:bg-indigo-50/80 hover:border-indigo-300 py-3 text-xs sm:text-sm font-semibold text-slate-700 hover:text-indigo-700 transition-all cursor-pointer shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Gauge className="h-4 w-4 text-indigo-600" />
-                      <span>Check ATS Score</span>
-                    </button>
-                  )}
-                </div>
               </div>
 
               {/* Right Column: Score Results or Empty State */}

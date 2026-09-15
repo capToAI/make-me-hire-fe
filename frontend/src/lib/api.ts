@@ -1,4 +1,5 @@
 import type {
+  AtsEvaluationRecord,
   AtsScoreData,
   ResumeListItem,
   ResumeState,
@@ -602,5 +603,103 @@ export async function applyTailoredResume(
   }
 }
 
+/**
+ * Fetches historical ATS evaluations for the authenticated user, optionally filtered by resume.
+ */
+export async function fetchAtsHistory(
+  resumeId?: string,
+  limit: number = 20
+): Promise<{ success: boolean; data?: AtsEvaluationRecord[]; error?: string }> {
+  try {
+    const params = new URLSearchParams();
+    if (resumeId) params.set("resumeId", resumeId);
+    if (limit) params.set("limit", String(limit));
 
+    const queryString = params.toString() ? `?${params.toString()}` : "";
+    const res = await fetch(`/api/ats-score/history${queryString}`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
 
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        error:
+          errJson.message ||
+          errJson.error ||
+          `Server responded with status ${res.status}`,
+      };
+    }
+
+    const data: AtsEvaluationRecord[] = await res.json();
+    return { success: true, data };
+  } catch (err: unknown) {
+    const msg =
+      err instanceof Error ? err.message : "Failed to fetch ATS evaluation history";
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * Fetches a single ATS evaluation record by its UUID.
+ */
+export async function fetchAtsEvaluation(
+  id: string
+): Promise<{ success: boolean; data?: AtsEvaluationRecord; error?: string }> {
+  try {
+    const res = await fetch(`/api/ats-score/history/${id}`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        error:
+          errJson.message ||
+          errJson.error ||
+          `Server responded with status ${res.status}`,
+      };
+    }
+
+    const data: AtsEvaluationRecord = await res.json();
+    return { success: true, data };
+  } catch (err: unknown) {
+    const msg =
+      err instanceof Error ? err.message : "Failed to fetch ATS evaluation";
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * Deletes an ATS evaluation record from history by its UUID.
+ */
+export async function deleteAtsEvaluation(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`/api/ats-score/history/${id}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        error:
+          errJson.message ||
+          errJson.error ||
+          `Server responded with status ${res.status}`,
+      };
+    }
+
+    return { success: true };
+  } catch (err: unknown) {
+    const msg =
+      err instanceof Error ? err.message : "Failed to delete ATS evaluation";
+    return { success: false, error: msg };
+  }
+}
