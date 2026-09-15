@@ -244,6 +244,7 @@ function AtsScoreContent() {
         jobDescription.trim(),
         confirmedSkills,
         rejectedSkills,
+        tailoredResult?.tailoredResumeId,
       );
 
       if (res.success && res.data) {

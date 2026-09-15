@@ -206,6 +206,7 @@ function TailorPageContent() {
         jobDescription.trim(),
         confirmedSkills,
         rejectedSkills,
+        tailoredResult?.tailoredResumeId,
       );
 
       if (res.success && res.data) {

@@ -11,6 +11,7 @@ interface ResumeComparisonViewProps {
   tailoredResume: ResumeState;
   resumeName: string;
   resumeId?: string;
+  tailoredResumeId?: string;
   className?: string;
 }
 
@@ -21,12 +22,15 @@ export function ResumeComparisonView({
   tailoredResume,
   resumeName,
   resumeId,
+  tailoredResumeId,
   className = "h-full",
 }: ResumeComparisonViewProps) {
   // Tailored tab is first and active by default
   const [activeTab, setActiveTab] = useState<TabType>("tailored");
   const safeResumeName = resumeName.trim().replace(/\s+/g, "_") || "Resume";
 
+  const activeTargetId =
+    activeTab === "tailored" ? tailoredResumeId || resumeId : resumeId;
   const currentResume = activeTab === "tailored" ? tailoredResume : originalResume;
   const currentLabel = activeTab === "tailored" ? "Tailored Resume" : "Base Resume";
   const currentBadge = activeTab === "tailored" ? "ATS Optimized" : "Original Baseline";
@@ -76,13 +80,13 @@ export function ResumeComparisonView({
 
         {/* Action Controls */}
         <div className="flex items-center gap-2">
-          {resumeId && (
+          {activeTargetId && (
             <Link
-              href={`/builder?id=${encodeURIComponent(resumeId)}`}
+              href={`/builder?id=${encodeURIComponent(activeTargetId)}`}
               className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all cursor-pointer shadow-2xs"
             >
               <Edit3 className="h-3.5 w-3.5 text-slate-500" />
-              <span>Edit in Builder</span>
+              <span>Edit {activeTab === "tailored" ? "Tailored" : "Base"} in Builder</span>
             </Link>
           )}
         </div>

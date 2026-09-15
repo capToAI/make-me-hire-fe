@@ -145,7 +145,14 @@ export function ResumeTailorView({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
+          {tailoredResult.tailoredResumeId && (
+            <div className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800 shadow-2xs">
+              <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
+              <span>Saved as Tailored Copy</span>
+            </div>
+          )}
+
           <button
             type="button"
             onClick={onDiscard}
@@ -454,6 +461,7 @@ export function ResumeTailorView({
             tailoredResume={tailoredResult.tailoredResumeData}
             resumeName={tailoredResult.resumeName}
             resumeId={tailoredResult.resumeId}
+            tailoredResumeId={tailoredResult.tailoredResumeId}
             className="h-full"
           />
         </div>

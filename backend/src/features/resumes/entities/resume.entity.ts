@@ -26,6 +26,17 @@ export class Resume {
   @Column({ type: 'jsonb' })
   data!: Record<string, any>;
 
+  @Column({
+    name: 'resume_type',
+    type: 'varchar',
+    length: 50,
+    default: 'base',
+  })
+  resume_type!: 'base' | 'tailored';
+
+  @Column({ name: 'parent_resume_id', type: 'uuid', nullable: true })
+  parent_resume_id?: string | null;
+
   @CreateDateColumn({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;
 

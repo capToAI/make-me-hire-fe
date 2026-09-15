@@ -25,6 +25,12 @@ export class ResumeResponseDto {
 
   @ApiProperty({ example: '2026-08-29T10:00:00.000Z' })
   updatedAt!: Date;
+
+  @ApiProperty({ example: 'base', enum: ['base', 'tailored'] })
+  resumeType!: 'base' | 'tailored';
+
+  @ApiProperty({ example: null, nullable: true })
+  parentResumeId?: string | null;
 }
 
 /**
@@ -48,4 +54,11 @@ export class ResumeListItemDto {
 
   @ApiProperty({ example: '2026-08-29T10:00:00.000Z' })
   updatedAt!: Date;
+
+  @ApiProperty({ example: 'base', enum: ['base', 'tailored'] })
+  resumeType!: 'base' | 'tailored';
+
+  @ApiProperty({ example: null, nullable: true })
+  parentResumeId?: string | null;
 }
+

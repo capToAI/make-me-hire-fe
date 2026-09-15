@@ -293,13 +293,14 @@ export async function refineProjectBulletsWithAi(params: {
 /**
  * Fetches the authenticated user's list of saved resumes.
  */
-export async function fetchUserResumes(): Promise<{
+export async function fetchUserResumes(type?: "base" | "tailored"): Promise<{
   success: boolean;
   data?: ResumeListItem[];
   error?: string;
 }> {
   try {
-    const res = await fetch("/api/resumes", {
+    const url = type ? `/api/resumes?type=${encodeURIComponent(type)}` : "/api/resumes";
+    const res = await fetch(url, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
       cache: "no-store",
@@ -514,7 +515,8 @@ export async function tailorResume(
   resumeId: string,
   jobDescription: string,
   confirmedSkills: string[] = [],
-  rejectedSkills: string[] = []
+  rejectedSkills: string[] = [],
+  tailoredResumeId?: string
 ): Promise<{ success: boolean; data?: TailoredResumeResponse; error?: string }> {
   const trimmedJd = (jobDescription || "").trim();
   if (!resumeId) {
@@ -533,6 +535,7 @@ export async function tailorResume(
         jobDescription: trimmedJd,
         confirmedSkills,
         rejectedSkills,
+        tailoredResumeId,
       }),
     });
 

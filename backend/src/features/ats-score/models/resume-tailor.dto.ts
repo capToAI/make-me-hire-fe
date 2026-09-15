@@ -52,6 +52,14 @@ export class TailorResumeDto {
   @IsArray()
   @IsString({ each: true })
   rejectedSkills?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Existing tailored resume UUID to update on regeneration, preventing duplicate entries',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @IsOptional()
+  @IsUUID('4', { message: 'tailoredResumeId must be a valid UUID v4' })
+  tailoredResumeId?: string;
 }
 
 /**
@@ -146,6 +154,9 @@ export class TailoredResumeResponseDto {
 
   @ApiProperty({ description: 'Target resume UUID' })
   resumeId!: string;
+
+  @ApiPropertyOptional({ description: 'Persisted tailored resume record UUID in resumes table' })
+  tailoredResumeId?: string;
 
   @ApiProperty({ description: 'Target resume name' })
   resumeName!: string;

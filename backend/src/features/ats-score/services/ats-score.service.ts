@@ -514,6 +514,53 @@ export class AtsScoreService {
     tailoredScore = Math.max(0, Math.min(100, tailoredScore));
     const scoreDifference = tailoredScore - originalAnalysis.score;
 
+    // Persist or update the tailored resume in the resumes table
+    let savedTailoredResume: Resume;
+
+    if (dto.tailoredResumeId) {
+      // Update existing tailored resume
+      const existing = await this.resumeRepository.findOne({
+        where: { id: dto.tailoredResumeId, user_id: user.id },
+      });
+      if (existing) {
+        existing.data = tailoredAgentResult.tailoredResumeData;
+        existing.position = tailoredPosition;
+        existing.updated_at = new Date();
+        savedTailoredResume = await this.resumeRepository.save(existing);
+        this.logger.log(
+          `Updated tailored resume ${savedTailoredResume.id} for user ${user.id}`,
+        );
+      } else {
+        // Fallback: create if specified ID not found
+        const newRecord = this.resumeRepository.create({
+          user_id: user.id,
+          name: `${resume.name} (Tailored)`,
+          position: tailoredPosition,
+          data: tailoredAgentResult.tailoredResumeData,
+          resume_type: 'tailored',
+          parent_resume_id: resume.id,
+        });
+        savedTailoredResume = await this.resumeRepository.save(newRecord);
+        this.logger.log(
+          `Created new tailored resume ${savedTailoredResume.id} for user ${user.id}`,
+        );
+      }
+    } else {
+      // First-time tailoring: create brand-new tailored resume entry
+      const newRecord = this.resumeRepository.create({
+        user_id: user.id,
+        name: `${resume.name} (Tailored)`,
+        position: tailoredPosition,
+        data: tailoredAgentResult.tailoredResumeData,
+        resume_type: 'tailored',
+        parent_resume_id: resume.id,
+      });
+      savedTailoredResume = await this.resumeRepository.save(newRecord);
+      this.logger.log(
+        `Created new tailored resume ${savedTailoredResume.id} for user ${user.id}`,
+      );
+    }
+
     return {
       originalScore: originalAnalysis.score,
       originalRank: originalAnalysis.rank,
@@ -537,9 +584,12 @@ export class AtsScoreService {
         ? tailoredAnalysis.missingSkills
         : originalAnalysis.missingSkills,
       resumeId: resume.id,
+      tailoredResumeId: savedTailoredResume.id,
       resumeName: resume.name,
       position: tailoredPosition,
-      tailoredAt: new Date().toISOString(),
+      tailoredAt: savedTailoredResume.updated_at
+        ? savedTailoredResume.updated_at.toISOString()
+        : new Date().toISOString(),
     };
   }
 

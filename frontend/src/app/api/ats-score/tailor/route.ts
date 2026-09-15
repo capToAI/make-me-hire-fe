@@ -60,6 +60,7 @@ export async function POST(request: Request) {
         rejectedSkills: Array.isArray(body.rejectedSkills)
           ? body.rejectedSkills
           : [],
+        tailoredResumeId: body.tailoredResumeId || undefined,
       }),
     });
 
