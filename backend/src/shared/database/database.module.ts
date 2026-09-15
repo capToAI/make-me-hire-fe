@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../../features/users/entities/user.entity';
 import { Account } from '../../features/users/entities/account.entity';
 import { Resume } from '../../features/resumes/entities/resume.entity';
+import { AtsEvaluation } from '../../features/ats-score/entities/ats-evaluation.entity';
 
 @Module({
   imports: [
@@ -34,7 +35,7 @@ import { Resume } from '../../features/resumes/entities/resume.entity';
         return {
           type: 'postgres',
           url,
-          entities: [User, Account, Resume],
+          entities: [User, Account, Resume, AtsEvaluation],
           synchronize,
           autoLoadEntities: true,
           ssl,

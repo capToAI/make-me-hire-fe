@@ -6,11 +6,14 @@ const BACKEND_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   "http://localhost:3001";
 
-export async function GET(request: Request) {
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json(
-      { error: "Authentication required to view resumes" },
+      { error: "Authentication required to view ATS evaluation" },
       { status: 401 }
     );
   }
@@ -23,34 +26,41 @@ export async function GET(request: Request) {
     );
   }
 
-  try {
-    const { searchParams } = new URL(request.url);
-    const type = searchParams.get("type");
-    const queryStr = type ? `?type=${encodeURIComponent(type)}` : "";
+  const { id } = await params;
+  if (!id) {
+    return NextResponse.json(
+      { error: "Evaluation ID is required" },
+      { status: 400 }
+    );
+  }
 
-    const response = await fetch(`${BACKEND_URL}/api/resumes${queryStr}`, {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/ats-score/history/${id}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
         "x-user-id": String(userIdentifier),
         "x-user-email": session.user.email || "",
       },
-      cache: "no-store",
     });
 
     const data = await response.json();
     return NextResponse.json(data, { status: response.status });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Failed to fetch resumes";
+    const msg =
+      err instanceof Error ? err.message : "Failed to fetch ATS evaluation";
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
-export async function POST(request: Request) {
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json(
-      { error: "Authentication required to create a resume" },
+      { error: "Authentication required to delete ATS evaluation" },
       { status: 401 }
     );
   }
@@ -63,22 +73,29 @@ export async function POST(request: Request) {
     );
   }
 
+  const { id } = await params;
+  if (!id) {
+    return NextResponse.json(
+      { error: "Evaluation ID is required" },
+      { status: 400 }
+    );
+  }
+
   try {
-    const body = await request.json();
-    const response = await fetch(`${BACKEND_URL}/api/resumes`, {
-      method: "POST",
+    const response = await fetch(`${BACKEND_URL}/api/ats-score/history/${id}`, {
+      method: "DELETE",
       headers: {
         "Content-Type": "application/json",
         "x-user-id": String(userIdentifier),
         "x-user-email": session.user.email || "",
       },
-      body: JSON.stringify(body),
     });
 
     const data = await response.json();
     return NextResponse.json(data, { status: response.status });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Failed to create resume";
+    const msg =
+      err instanceof Error ? err.message : "Failed to delete ATS evaluation";
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

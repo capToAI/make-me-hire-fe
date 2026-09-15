@@ -17,9 +17,11 @@ export interface DeterministicAtsResult {
 }
 
 /**
- * Standard industry skill and technology dictionary for ATS taxonomy matching.
+ * Cross-industry standard skill and technology dictionary for baseline ATS taxonomy matching
+ * across tech, finance, healthcare, legal, marketing, sales, and operations.
  */
-const COMMON_TECH_SKILLS = [
+const COMMON_CROSS_INDUSTRY_SKILLS = [
+  // Tech & Software Development
   'JavaScript',
   'TypeScript',
   'Python',
@@ -33,69 +35,140 @@ const COMMON_TECH_SKILLS = [
   'Ruby',
   'Swift',
   'Kotlin',
+  'SQL',
+  'HTML5',
+  'CSS3',
   'React',
   'Next.js',
   'Angular',
   'Vue.js',
-  'Svelte',
+  'Tailwind CSS',
+  'Redux',
   'Node.js',
   'NestJS',
   'Express',
   'Django',
-  'Flask',
-  'FastAPI',
   'Spring Boot',
-  '.NET',
-  'ASP.NET',
-  'HTML5',
-  'CSS3',
-  'Tailwind CSS',
-  'Bootstrap',
-  'Sass',
-  'Redux',
-  'Zustand',
   'GraphQL',
   'REST API',
+  'Microservices',
   'PostgreSQL',
   'MySQL',
   'MongoDB',
   'Redis',
-  'SQLite',
-  'Oracle',
-  'SQL Server',
-  'Elasticsearch',
   'Docker',
   'Kubernetes',
   'AWS',
-  'Amazon Web Services',
   'Azure',
   'GCP',
-  'Google Cloud',
   'CI/CD',
   'Git',
   'GitHub',
-  'GitLab',
-  'Jenkins',
-  'Terraform',
   'Linux',
-  'Microservices',
-  'Serverless',
-  'Kafka',
-  'RabbitMQ',
-  'Jest',
-  'Mocha',
-  'Cypress',
-  'Playwright',
-  'Selenium',
+
+  // Accounting, Finance & Banking
+  'QuickBooks',
+  'Tally',
+  'GAAP',
+  'IFRS',
+  'Financial Modeling',
+  'Accounts Payable',
+  'Accounts Receivable',
+  'Financial Reporting',
+  'General Ledger',
+  'Tax Preparation',
+  'Auditing',
+  'Internal Audit',
+  'Balance Sheet',
+  'P&L Management',
+  'Bank Reconciliation',
+  'Excel',
+  'Advanced Excel',
+  'SAP',
+  'Oracle Financials',
+  'Budgeting',
+  'Forecasting',
+  'Cost Accounting',
+  'Payroll Management',
+
+  // Healthcare, Nursing & Clinical
+  'Patient Care',
+  'Triage',
+  'HIPAA Compliance',
+  'Electronic Health Records',
+  'EHR',
+  'EMR',
+  'Epic',
+  'Cerner',
+  'BLS',
+  'Basic Life Support',
+  'CPR',
+  'ACLS',
+  'Clinical Documentation',
+  'Phlebotomy',
+  'Patient Assessment',
+  'Vital Signs',
+  'Medication Administration',
+  'Infection Control',
+  'Patient Advocacy',
+
+  // Sales, Digital Marketing & Advertising
+  'Meta Ads',
+  'Facebook Ads',
+  'Google Ads',
+  'Google Analytics',
+  'Google Tag Manager',
+  'SEO',
+  'Search Engine Optimization',
+  'SEM',
+  'PPC',
+  'Performance Marketing',
+  'Social Media Marketing',
+  'Content Strategy',
+  'Email Marketing',
+  'Lead Generation',
+  'Copywriting',
+  'HubSpot',
+  'Salesforce',
+  'CRM',
+  'B2B Sales',
+  'Cold Calling',
+  'Sales Pipeline',
+  'Canva',
+  'Figma',
+  'WordPress',
+  'Shopify',
+
+  // Legal, Governance & Compliance
+  'Contract Negotiation',
+  'Contract Drafting',
+  'Litigation',
+  'Legal Research',
+  'Due Diligence',
+  'Corporate Governance',
+  'Intellectual Property',
+  'Regulatory Compliance',
+  'Risk Assessment',
+
+  // Operations, Logistics & Management
+  'Project Management',
   'Agile',
   'Scrum',
-  'DevOps',
-  'System Design',
-  'Architecture',
-  'Unit Testing',
-  'Integration Testing',
-  'Cloud Computing',
+  'PMP',
+  'Supply Chain Management',
+  'Logistics',
+  'Operations Management',
+  'Vendor Management',
+  'Stakeholder Management',
+  'Six Sigma',
+  'Lean Management',
+  'Quality Assurance',
+  'Process Improvement',
+  'Team Leadership',
+  'Customer Service',
 ];
+
+const COMMON_TECH_SKILLS = COMMON_CROSS_INDUSTRY_SKILLS;
 
 const STOP_WORDS = new Set([
   'about',
@@ -169,6 +242,7 @@ const STOP_WORDS = new Set([
 /**
  * Dedicated ATS tool for extracting keywords, computing skill coverage,
  * and performing deterministic heuristic matching when LLM analysis is unavailable.
+ * Completely domain-agnostic for any industry.
  */
 @Injectable()
 export class AtsAnalyzerTool {
@@ -199,25 +273,213 @@ export class AtsAnalyzerTool {
   }
 
   /**
-   * Identifies technological and professional skills mentioned in the given text.
+   * Formats skill titles consistently (preserving uppercase acronyms).
    */
-  findSkills(text: string): string[] {
-    const lower = ` ${text.toLowerCase()} `;
-    const found: string[] = [];
+  formatSkillTitle(term: string): string {
+    const trimmed = term.trim();
+    // Pure uppercase acronyms (AWS, GAAP, SQL, SEO, REST)
+    if (/^[A-Z0-9+#.-]+$/.test(trimmed)) return trimmed;
+    // Mixed case / PascalCase / internal acronyms (NestJS, Next.js, PostgreSQL, QuickBooks, JavaScript)
+    if (/[a-z][A-Z]/.test(trimmed) || /[A-Z]{2,}/.test(trimmed)) {
+      return trimmed;
+    }
+    return trimmed
+      .split(/\s+/)
+      .map((w) => (w.length <= 2 && !/[a-z]/.test(w) ? w : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()))
+      .join(' ');
+  }
 
-    for (const skill of COMMON_TECH_SKILLS) {
+  /**
+   * Evaluates whether an extracted string is a valid skill candidate.
+   */
+  isValidSkillCandidate(term: string): boolean {
+    if (!term || typeof term !== 'string') return false;
+    const clean = term.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, '').trim();
+    if (clean.length < 2 || clean.length > 50) return false;
+    if (/^\d+$/.test(clean)) return false;
+
+    const lower = clean.toLowerCase();
+    if (STOP_WORDS.has(lower)) return false;
+
+    const genericPhrases = [
+      'experience with',
+      'knowledge of',
+      'proficiency in',
+      'ability to',
+      'responsible for',
+      'understanding of',
+      'working knowledge of',
+      'proven track record',
+      'years of experience',
+      'bachelor',
+      'master',
+      'degree in',
+      'high school',
+      'strong communication',
+      'problem solving',
+      'team player',
+      'fast paced',
+      'self motivated',
+      'interpersonal skills',
+      'attention to detail',
+      'work independently',
+    ];
+
+    if (genericPhrases.some((gp) => lower.startsWith(gp) || lower === gp)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Dynamically extracts required skills and qualifications from any job description.
+   * Works across tech, healthcare, accounting, legal, sales, engineering, etc.
+   */
+  extractSkillsFromJobDescription(jobDescription: string): string[] {
+    if (!jobDescription || !jobDescription.trim()) return [];
+
+    const extracted = new Set<string>();
+    const lines = jobDescription.split(/\r?\n/);
+
+    const sectionHeaderRegex = /^(?:#+\s*)?(?:requirements|qualifications|required skills|skills|key competencies|what you(?:'ll)? need|what we(?:'re)? looking for|responsibilities|must have|profile|core competencies)[:\s]*$/i;
+    const bulletRegex = /^[\s*•\-–—►*+]+(?:\d+[\.)]\s*)?(.*)$/;
+
+    let inTargetSection = false;
+    const targetSectionLines: string[] = [];
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+
+      if (sectionHeaderRegex.test(trimmed)) {
+        inTargetSection = true;
+        continue;
+      } else if (inTargetSection && /^(?:#+\s*)?(?:about us|company|benefits|perks|compensation|how to apply|equal opportunity|salary)[:\s]*$/i.test(trimmed)) {
+        inTargetSection = false;
+      }
+
+      if (inTargetSection) {
+        targetSectionLines.push(trimmed);
+      }
+    }
+
+    const candidateLines = targetSectionLines.length > 0 ? targetSectionLines : lines;
+
+    for (const line of candidateLines) {
+      const bulletMatch = line.match(bulletRegex);
+      const textToScan = bulletMatch ? bulletMatch[1].trim() : line.trim();
+
+      if (textToScan.length < 2 || textToScan.length > 120) continue;
+
+      const parts = textToScan.split(/[,;/|]+/).map((p) => p.trim());
+      for (const part of parts) {
+        let cleaned = part
+          .replace(/^[\s•\-–—*+]+/, '')
+          .replace(/^(?:and|or|&)\s+/i, '')
+          .replace(/^(?:strong\s+)?(?:working\s+)?(?:knowledge|expertise|experience|skills?)\s+(?:of|in|with)\s+/i, '')
+          .replace(/^(?:proficient|proficiency)\s+(?:in|with)\s+/i, '')
+          .replace(/^(?:ability|demonstrated\s+ability)\s+to\s+/i, '')
+          .replace(/^(?:ensure\s+strict\s+compliance\s+with|compliance\s+with)\s+/i, '')
+          .replace(/^(?:utilize|manage|prepare|lead|handle|maintain)\s+(?:full[- ]cycle\s+)?/i, '')
+          .replace(/[.:]$/, '')
+          .trim();
+        if (this.isValidSkillCandidate(cleaned)) {
+          extracted.add(this.formatSkillTitle(cleaned));
+        }
+      }
+    }
+
+    // Include cross-industry baseline dictionary matches
+    const jdLower = ` ${jobDescription.toLowerCase()} `;
+    for (const skill of COMMON_CROSS_INDUSTRY_SKILLS) {
       const hasSpecial = /[+#.]/.test(skill);
       const escaped = skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const pattern = hasSpecial
         ? new RegExp(`(?:^|[^a-zA-Z0-9])${escaped}(?:$|[^a-zA-Z0-9])`, 'i')
         : new RegExp(`\\b${escaped}\\b`, 'i');
 
-      if (pattern.test(lower)) {
-        found.push(skill);
+      if (pattern.test(jdLower)) {
+        extracted.add(skill);
       }
     }
 
-    return Array.from(new Set(found));
+    // Normalize and deduplicate overlapping phrases (e.g. keep "QuickBooks" if both exist)
+    const rawList = Array.from(extracted);
+    const sortedByLength = [...rawList].sort((a, b) => a.length - b.length);
+    const uniqueSkills: string[] = [];
+
+    for (const skill of sortedByLength) {
+      const lower = skill.toLowerCase();
+      const redundant = uniqueSkills.some((existing) => {
+        const exLower = existing.toLowerCase();
+        return exLower === lower || (lower.includes(exLower) && exLower.length >= 4);
+      });
+      if (!redundant) {
+        uniqueSkills.push(skill);
+      }
+    }
+
+    return uniqueSkills.slice(0, 40);
+  }
+
+  /**
+   * Extracts candidate skills dynamically from explicit list and resume text sections.
+   */
+  extractSkillsFromResume(resumeText: string, explicitSkills: string[] = []): string[] {
+    const extracted = new Set<string>(
+      (explicitSkills || []).map((s) => this.formatSkillTitle(s)).filter(Boolean),
+    );
+
+    const lines = (resumeText || '').split(/\r?\n/);
+    let inSkillsSection = false;
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (/^###\s*(?:skills|technical skills|core competencies|competencies|tools|technologies|certifications)/i.test(trimmed)) {
+        inSkillsSection = true;
+        continue;
+      } else if (/^###\s*/.test(trimmed) && inSkillsSection) {
+        inSkillsSection = false;
+      }
+
+      if (inSkillsSection && trimmed) {
+        const parts = trimmed.split(/[,;|•\-–—]+/).map((p) => p.trim());
+        for (const part of parts) {
+          const cleaned = part
+            .replace(/^[\s•\-–—*+]+/, '')
+            .replace(/^(?:and|or|&)\s+/i, '')
+            .replace(/[.:]$/, '')
+            .trim();
+          if (this.isValidSkillCandidate(cleaned)) {
+            extracted.add(this.formatSkillTitle(cleaned));
+          }
+        }
+      }
+    }
+
+    // Include cross-industry baseline matches in resume
+    const resLower = ` ${(resumeText || '').toLowerCase()} `;
+    for (const skill of COMMON_CROSS_INDUSTRY_SKILLS) {
+      const hasSpecial = /[+#.]/.test(skill);
+      const escaped = skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const pattern = hasSpecial
+        ? new RegExp(`(?:^|[^a-zA-Z0-9])${escaped}(?:$|[^a-zA-Z0-9])`, 'i')
+        : new RegExp(`\\b${escaped}\\b`, 'i');
+
+      if (pattern.test(resLower)) {
+        extracted.add(skill);
+      }
+    }
+
+    return Array.from(extracted);
+  }
+
+  /**
+   * Backward-compatible skill extractor that operates dynamically on any text.
+   */
+  findSkills(text: string): string[] {
+    return this.extractSkillsFromJobDescription(text);
   }
 
   /**
@@ -233,14 +495,16 @@ export class AtsAnalyzerTool {
 
   /**
    * Performs deterministic ATS resume-to-job analysis without external network or LLM dependencies.
+   * Completely domain-agnostic for any industry or profession.
    */
   analyzeDeterministically(
     resumeText: string,
     jobDescription: string,
     metadata?: { name?: string; position?: string },
+    candidateExplicitSkills: string[] = [],
   ): DeterministicAtsResult {
-    const resumeSkills = this.findSkills(resumeText);
-    const jobSkills = this.findSkills(jobDescription);
+    const resumeSkills = this.extractSkillsFromResume(resumeText, candidateExplicitSkills);
+    const jobSkills = this.extractSkillsFromJobDescription(jobDescription);
 
     const resumeTokens = this.extractTokens(resumeText);
     const jobTokens = this.extractTokens(jobDescription);
@@ -274,8 +538,10 @@ export class AtsAnalyzerTool {
     }
 
     let keywordWeight = 0;
-    if (jobTokens.size > 0) {
-      keywordWeight = (matchedTokens.length / jobTokens.size) * 30;
+    const targetTokenThreshold = Math.min(25, Math.max(5, Math.round(jobTokens.size * 0.35)));
+    if (targetTokenThreshold > 0) {
+      const keywordRatio = Math.min(1.0, matchedTokens.length / targetTokenThreshold);
+      keywordWeight = keywordRatio * 30;
     } else {
       keywordWeight = 20;
     }
@@ -335,12 +601,12 @@ export class AtsAnalyzerTool {
     }
     if (matchedTokens.length > 10) {
       strengths.push(
-        'High semantic density across domain terminology and technical responsibilities.',
+        'Strong alignment across domain terminology and professional responsibilities.',
       );
     }
     if (roleBonus >= 5) {
       strengths.push(
-        `Target job title (${metadata?.position || 'role'}) aligns directly with the job description.`,
+        `Target professional headline (${metadata?.position || 'role'}) aligns directly with the job description.`,
       );
     }
     if (strengths.length === 0) {
@@ -349,41 +615,41 @@ export class AtsAnalyzerTool {
 
     // Dynamic improvements
     const improvements: string[] = [];
-    if (missingSkills.length > 0) {
+    if (sanitizedMissingSkills.length > 0) {
       improvements.push(
-        `Incorporate missing high-priority skills if qualified: ${missingSkills.slice(0, 5).join(', ')}.`,
+        `Incorporate missing high-priority skills if qualified: ${sanitizedMissingSkills.slice(0, 5).join(', ')}.`,
       );
     }
     if (missingTokens.length > 5) {
       improvements.push(
-        'Increase contextual keywords from the job description in your summary and experience bullet points.',
+        'Incorporate contextual keywords and industry terminology from the job description into your summary and experience bullet points.',
       );
     }
     improvements.push(
-      'Ensure work experience descriptions highlight measurable outcomes and metrics.',
+      'Ensure work experience descriptions highlight measurable outcomes, achievements, and impact.',
     );
 
     // Dynamic recommendations
     const recommendations: string[] = [];
-    if (missingSkills.length > 0) {
+    if (sanitizedMissingSkills.length > 0) {
       recommendations.push(
-        `Explicitly list ${missingSkills.slice(0, 3).join(', ')} in the Skills section if you have working knowledge.`,
+        `Explicitly list ${sanitizedMissingSkills.slice(0, 3).join(', ')} in the Skills section if you have working knowledge.`,
       );
     }
     recommendations.push(
       'Tailor the professional summary to mirror the primary objectives stated in the job description.',
     );
     recommendations.push(
-      'Align project technology stacks with the required tools specified by the employer.',
+      'Align project and role achievements with the required competencies and tools specified by the employer.',
     );
 
     const summary =
       `Based on automated ATS parsing, the resume achieves a ${score}/100 (${rank}). ` +
       (matchedSkills.length > 0
-        ? `It strongly matches ${matchedSkills.length} requested key skill(s). `
+        ? `It strongly matches ${matchedSkills.length} requested key competency/competencies. `
         : '') +
-      (missingSkills.length > 0
-        ? `Addressing ${missingSkills.length} missing skill requirement(s) could significantly boost your ranking.`
+      (sanitizedMissingSkills.length > 0
+        ? `Addressing ${sanitizedMissingSkills.length} missing skill requirement(s) could significantly boost your ranking.`
         : 'Resume demonstrates solid coverage for this target position.');
 
     return {
@@ -399,4 +665,53 @@ export class AtsAnalyzerTool {
       recommendations,
     };
   }
+
+  /**
+   * Computes the authentic marginal ATS score impact (points) for a specific skill
+   * based on the ATS scoring pillar weights and the skill's prominence in the job description.
+   *
+   * @param {string} skill - Target skill name.
+   * @param {number} totalJobSkillsCount - Total number of skills required by the job.
+   * @param {string} jobDescription - Full job description text.
+   * @returns {number} Integer point contribution of this skill (typically 1 to 6 points).
+   */
+  calculateSkillMarginalImpact(
+    skill: string,
+    totalJobSkillsCount: number,
+    jobDescription: string,
+  ): number {
+    if (!skill || !skill.trim()) return 1;
+
+    // Total points allocated to skills pillar is 50 points out of 100
+    const totalSkillPillarWeight = 50;
+    const effectiveSkillCount = Math.max(5, Math.min(25, totalJobSkillsCount || 10));
+    const basePointPerSkill = totalSkillPillarWeight / effectiveSkillCount;
+
+    const jdLower = (jobDescription || '').toLowerCase();
+    const skillLower = skill.toLowerCase().trim();
+
+    // Check importance weighting from JD structure
+    let multiplier = 1.0;
+
+    // Split JD into sections if identifiable
+    const requiredMatch = jdLower.match(/(?:required skills|key responsibilities|requirements|must have)([\s\S]*?)(?:preferred skills|nice to have|qualification|$)/i);
+    const preferredMatch = jdLower.match(/(?:preferred skills|nice to have|bonus|good to have)([\s\S]*?)(?:qualification|experience|$)/i);
+
+    if (requiredMatch && requiredMatch[1].includes(skillLower)) {
+      multiplier = 1.35; // Core mandatory skill
+    } else if (preferredMatch && preferredMatch[1].includes(skillLower)) {
+      multiplier = 0.75; // Secondary / preferred skill
+    }
+
+    // Prominence frequency bonus
+    const escaped = skillLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const occurrences = (jdLower.match(new RegExp(`\\b${escaped}\\b`, 'gi')) || []).length;
+    if (occurrences >= 3) {
+      multiplier += 0.2;
+    }
+
+    const calculated = Math.round(basePointPerSkill * multiplier);
+    return Math.max(1, Math.min(6, calculated));
+  }
 }
+

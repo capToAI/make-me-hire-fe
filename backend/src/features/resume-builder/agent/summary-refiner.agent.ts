@@ -155,14 +155,21 @@ export class SummaryRefinerAgent {
       });
 
       const techList = technologies && technologies.length > 0 ? technologies.join(', ') : 'None specified';
-      const promptText = `Project Name: ${projectName || 'Not specified'}\nTechnologies: ${techList}\n\nDraft Bullet Points:\n${validBullets.map((b, i) => `${i + 1}. ${b}`).join('\n')}\n\nPlease elevate these project bullet points for maximum ATS and recruiter impact, highlighting key action verbs and technologies with **bold** syntax.`;
+      const promptText = `Project / Initiative Name: ${projectName || 'Not specified'}\nKey Tools / Technologies: ${techList}\n\nDraft Bullet Points:\n${validBullets.map((b, i) => `${i + 1}. ${b}`).join('\n')}\n\nPlease elevate these bullet points for maximum ATS and recruiter impact, selecting domain-aligned action verbs and highlighting key tools, metrics, and outcomes with **bold** syntax.`;
 
-      const systemPrompt = `You are an elite ATS resume writer and software engineering hiring specialist.
-Elevate the candidate's draft project bullet points into compelling, professional achievements:
-1. Start each bullet point with a powerful past-tense action verb (e.g. **Spearheaded**, **Architected**, **Engineered**, **Developed**, **Designed**).
-2. Seamlessly highlight primary technologies, tools, and quantifiable outcomes using **bold** markdown syntax (e.g. **Angular**, **real-time**, **PostgreSQL**).
-3. Ensure high grammatical precision and conciseness. Preserve all original facts without fabricating fictional company names or unsubstantiated claims.
-4. Return an array of refined bullet points in the structured output.`;
+      const systemPrompt = `You are an elite, multi-industry ATS resume strategist and executive hiring specialist across technical and non-technical domains.
+Elevate the candidate's draft project or work bullet points into compelling, professional achievements:
+1. Start each bullet point with an impactful, domain-appropriate past-tense action verb tailored to the role and profession:
+   - Technical/Engineering: Architected, Engineered, Optimized, Automated, Deployed, Integrated, Scaled.
+   - Marketing/Sales/Growth: Spearheaded, Accelerated, Generated, Orchestrated, Converted, Launched, Expanded.
+   - Operations/Management/HR: Streamlined, Standardized, Restructured, Facilitated, Onboarded, Championed.
+   - Finance/Accounting: Audited, Reconciled, Forecasted, Analyzed, Minimized, Allocated.
+   - Healthcare/Clinical: Coordinated, Administered, Assessed, Triaged, Monitored, Formulated.
+   - Design/Creative: Conceptualized, Crafted, Prototyped, Designed, Illustrated, Produced.
+2. STRICT VARIETY MANDATE: NEVER repeat the same starting verb across bullets within the same project. Use a fresh, distinct action verb for every single bullet.
+3. Seamlessly highlight primary technologies, tools, methodologies, metrics, and quantifiable outcomes using **bold** markdown syntax (e.g. **Figma**, **Angular**, **real-time**, **$1.2M**, **PostgreSQL**, **HubSpot**).
+4. Ensure high grammatical precision and conciseness. Preserve all original facts without fabricating fictional company names, imaginary tools, or unsubstantiated claims.
+5. Return an array of refined bullet points in the structured output.`;
 
       const result = await structuredLlm.invoke([
         new SystemMessage(systemPrompt),
@@ -186,7 +193,16 @@ Elevate the candidate's draft project bullet points into compelling, professiona
    * Deterministic fallback to polish project bullet points when LLM is unavailable.
    */
   fallbackRefineBullets(bullets: string[], technologies?: string[]): string[] {
-    const actionVerbs = ['Architected', 'Spearheaded', 'Engineered', 'Developed', 'Implemented', 'Designed'];
+    const actionVerbs = [
+      'Spearheaded',
+      'Delivered',
+      'Optimized',
+      'Implemented',
+      'Streamlined',
+      'Coordinated',
+      'Designed',
+      'Launched',
+    ];
 
     return bullets.map((b, idx) => {
       let cleaned = b.replace(/\r\n/g, ' ').replace(/\s+/g, ' ').trim();

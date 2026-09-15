@@ -28,6 +28,7 @@ export function ResumeListDashboard({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<"all" | "base" | "tailored">("all");
 
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -76,7 +77,14 @@ export function ResumeListDashboard({
     setResumes((prev) => prev.filter((r) => r.id !== resumeId));
   };
 
+  const baseCount = resumes.filter((r) => (r.resumeType || "base") === "base").length;
+  const tailoredCount = resumes.filter((r) => r.resumeType === "tailored").length;
+
   const filteredResumes = resumes.filter((r) => {
+    const type = r.resumeType || "base";
+    if (activeTab === "base" && type !== "base") return false;
+    if (activeTab === "tailored" && type !== "tailored") return false;
+
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -135,6 +143,76 @@ export function ResumeListDashboard({
           </button>
         </div>
       </div>
+
+      {/* Filter Tabs: All / Base / Tailored */}
+      {!isLoading && resumes.length > 0 && (
+        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab("all")}
+            className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              activeTab === "all"
+                ? "bg-slate-900 text-white shadow-xs"
+                : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            <span>All Resumes</span>
+            <span
+              className={`px-1.5 py-0.5 rounded-full text-[11px] ${
+                activeTab === "all"
+                  ? "bg-slate-700 text-white"
+                  : "bg-slate-100 text-slate-600"
+              }`}
+            >
+              {resumes.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("base")}
+            className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              activeTab === "base"
+                ? "bg-indigo-600 text-white shadow-xs"
+                : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            <FileText className="h-3.5 w-3.5" />
+            <span>Base Resumes</span>
+            <span
+              className={`px-1.5 py-0.5 rounded-full text-[11px] ${
+                activeTab === "base"
+                  ? "bg-indigo-700 text-white"
+                  : "bg-slate-100 text-slate-600"
+              }`}
+            >
+              {baseCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("tailored")}
+            className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              activeTab === "tailored"
+                ? "bg-purple-600 text-white shadow-xs"
+                : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>Tailored Resumes</span>
+            <span
+              className={`px-1.5 py-0.5 rounded-full text-[11px] ${
+                activeTab === "tailored"
+                  ? "bg-purple-700 text-white"
+                  : "bg-slate-100 text-slate-600"
+              }`}
+            >
+              {tailoredCount}
+            </span>
+          </button>
+        </div>
+      )}
 
       {/* Error state */}
       {error && (

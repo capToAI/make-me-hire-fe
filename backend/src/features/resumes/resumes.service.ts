@@ -194,11 +194,19 @@ export class ResumesService {
   /**
    * Retrieves all resumes owned by the authenticated user.
    */
-  async getUserResumes(userIdentifier: string | number): Promise<ResumeListItemDto[]> {
+  async getUserResumes(
+    userIdentifier: string | number,
+    type?: 'base' | 'tailored',
+  ): Promise<ResumeListItemDto[]> {
     const user = await this.resolveUser(userIdentifier);
 
+    const where: any = { user_id: user.id };
+    if (type) {
+      where.resume_type = type;
+    }
+
     const resumes = await this.resumeRepository.find({
-      where: { user_id: user.id },
+      where,
       order: { updated_at: 'DESC' },
     });
 
@@ -209,6 +217,9 @@ export class ResumesService {
       position: resume.position,
       createdAt: resume.created_at,
       updatedAt: resume.updated_at,
+      resumeType: resume.resume_type || 'base',
+      parentResumeId: resume.parent_resume_id || null,
+      atsEvaluationId: resume.ats_evaluation_id || null,
     }));
   }
 
@@ -327,6 +338,9 @@ export class ResumesService {
       data: resume.data,
       createdAt: resume.created_at,
       updatedAt: resume.updated_at,
+      resumeType: resume.resume_type || 'base',
+      parentResumeId: resume.parent_resume_id || null,
+      atsEvaluationId: resume.ats_evaluation_id || null,
     };
   }
 }

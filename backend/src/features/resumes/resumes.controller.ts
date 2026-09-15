@@ -9,6 +9,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   UnauthorizedException,
 } from '@nestjs/common';
 import {
@@ -97,9 +98,10 @@ export class ResumesController {
   @ApiResponse({ status: 401, description: 'Unauthorized - User not authenticated' })
   async getUserResumes(
     @Headers() headers: Record<string, string | undefined>,
+    @Query('type') type?: 'base' | 'tailored',
   ): Promise<ResumeListItemDto[]> {
     const userIdentifier = this.extractUserIdentifier(headers);
-    return this.resumesService.getUserResumes(userIdentifier);
+    return this.resumesService.getUserResumes(userIdentifier, type);
   }
 
   @Get(':id')

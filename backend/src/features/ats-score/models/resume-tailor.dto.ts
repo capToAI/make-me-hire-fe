@@ -52,6 +52,22 @@ export class TailorResumeDto {
   @IsArray()
   @IsString({ each: true })
   rejectedSkills?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Existing tailored resume UUID to update on regeneration, preventing duplicate entries',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @IsOptional()
+  @IsUUID('4', { message: 'tailoredResumeId must be a valid UUID v4' })
+  tailoredResumeId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Optional ATS Evaluation UUID that initiated this tailoring request',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @IsOptional()
+  @IsUUID('4', { message: 'atsEvaluationId must be a valid UUID v4' })
+  atsEvaluationId?: string;
 }
 
 /**
@@ -83,6 +99,7 @@ export interface SuggestedSkillItem {
   name: string;
   reason: string;
   relevance: 'high' | 'medium' | 'low';
+  scoreImpact?: number;
   status: 'pending' | 'confirmed' | 'rejected';
 }
 
@@ -131,8 +148,26 @@ export class TailoredResumeResponseDto {
   @ApiProperty({ description: 'Suggested skills identified from job description requiring confirmation' })
   suggestedSkills!: SuggestedSkillItem[];
 
+  @ApiPropertyOptional({ description: 'Matched keywords identified from ATS evaluation', type: [String] })
+  matchedKeywords?: string[];
+
+  @ApiPropertyOptional({ description: 'Missing keywords identified from ATS evaluation', type: [String] })
+  missingKeywords?: string[];
+
+  @ApiPropertyOptional({ description: 'Matched skills identified from ATS evaluation', type: [String] })
+  matchedSkills?: string[];
+
+  @ApiPropertyOptional({ description: 'Missing skills identified from ATS evaluation', type: [String] })
+  missingSkills?: string[];
+
   @ApiProperty({ description: 'Target resume UUID' })
   resumeId!: string;
+
+  @ApiPropertyOptional({ description: 'Persisted tailored resume record UUID in resumes table' })
+  tailoredResumeId?: string;
+
+  @ApiPropertyOptional({ description: 'ATS Evaluation UUID linked to this tailored resume' })
+  atsEvaluationId?: string;
 
   @ApiProperty({ description: 'Target resume name' })
   resumeName!: string;

@@ -44,6 +44,9 @@ describe('ResumesService', () => {
         created_at: new Date(),
         updated_at: new Date(),
         user: mockUser1,
+        resume_type: 'base',
+        parent_resume_id: null,
+        ats_evaluation_id: null,
       },
       {
         id: 'res-uuid-2',
@@ -54,6 +57,9 @@ describe('ResumesService', () => {
         created_at: new Date(),
         updated_at: new Date(),
         user: mockUser2,
+        resume_type: 'base',
+        parent_resume_id: null,
+        ats_evaluation_id: null,
       },
     ];
 

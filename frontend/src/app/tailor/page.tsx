@@ -13,7 +13,12 @@ import {
   RefreshCw,
   Sparkles,
 } from "lucide-react";
-import { fetchResumeById, fetchUserResumes, tailorResume } from "@/lib/api";
+import {
+  fetchAtsEvaluation,
+  fetchResumeById,
+  fetchUserResumes,
+  tailorResume,
+} from "@/lib/api";
 import type {
   ResumeListItem,
   ResumeState,
@@ -38,6 +43,9 @@ function TailorPageContent() {
   const [baseResumeData, setBaseResumeData] = useState<ResumeState | null>(
     null,
   );
+  const [currentEvaluationId, setCurrentEvaluationId] = useState<string | null>(
+    null,
+  );
   const [jobDescription, setJobDescription] = useState("");
   const [isLoadingResumes, setIsLoadingResumes] = useState(false);
   const [isLoadingBaseResume, setIsLoadingBaseResume] = useState(false);
@@ -52,7 +60,7 @@ function TailorPageContent() {
   const isAuthenticated = status === "authenticated";
   const isLoadingAuth = status === "loading";
 
-  // 1. Fetch user resumes & handle auto-tailor handover
+  // 1. Fetch user resumes & handle auto-tailor handover via evaluationId or resumeId
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -65,21 +73,28 @@ function TailorPageContent() {
         if (res.success && res.data) {
           setResumes(res.data);
 
-          // Check handover from query params or sessionStorage
+          const paramEvaluationId = searchParams.get("evaluationId");
           const paramResumeId = searchParams.get("resumeId");
-          const sessionResumeId =
-            typeof window !== "undefined"
-              ? sessionStorage.getItem("tailor_target_resume_id")
-              : null;
-          const targetResumeId = paramResumeId || sessionResumeId;
+          const shouldAutoTailor = searchParams.get("autoTailor") === "true";
 
-          const paramJobDesc =
-            typeof window !== "undefined"
-              ? sessionStorage.getItem("tailor_target_job_desc")
-              : "";
+          let targetResumeId = paramResumeId;
+          let targetJobDesc = "";
+          let activeEvaluationId: string | null = null;
 
-          if (paramJobDesc) {
-            setJobDescription(paramJobDesc);
+          // If evaluationId is present, fetch job description & associated resume directly from DB
+          if (paramEvaluationId) {
+            try {
+              const evalRes = await fetchAtsEvaluation(paramEvaluationId);
+              if (evalRes.success && evalRes.data) {
+                targetJobDesc = evalRes.data.jobDescription || "";
+                targetResumeId = evalRes.data.resumeId || targetResumeId;
+                activeEvaluationId = evalRes.data.id;
+                setCurrentEvaluationId(activeEvaluationId);
+                setJobDescription(targetJobDesc);
+              }
+            } catch (err) {
+              console.error("Failed to load ATS evaluation details:", err);
+            }
           }
 
           let activeResume: ResumeListItem | null = null;
@@ -93,24 +108,20 @@ function TailorPageContent() {
 
           setSelectedResume(activeResume);
 
-          // Trigger Auto-Tailor if requested from Check ATS page
-          const shouldAutoTailor =
-            searchParams.get("autoTailor") === "true" ||
-            (typeof window !== "undefined" &&
-              sessionStorage.getItem("tailor_auto_start") === "true");
-
+          // Trigger Auto-Tailor if requested from Check ATS page with valid job description
           if (
             shouldAutoTailor &&
             activeResume &&
-            paramJobDesc &&
-            paramJobDesc.trim().length >= 20 &&
+            targetJobDesc &&
+            targetJobDesc.trim().length >= 20 &&
             !autoTailoredRef.current
           ) {
             autoTailoredRef.current = true;
-            if (typeof window !== "undefined") {
-              sessionStorage.removeItem("tailor_auto_start");
-            }
-            startTailoring(activeResume.id, paramJobDesc.trim());
+            startTailoring(
+              activeResume.id,
+              targetJobDesc.trim(),
+              activeEvaluationId || undefined,
+            );
           }
         } else if (res.error) {
           setErrorMessage(res.error);
@@ -149,16 +160,32 @@ function TailorPageContent() {
   }, [selectedResume, tailoredResult]);
 
   // 3. Start Tailoring process
-  const startTailoring = async (resumeId: string, jobDesc: string) => {
+  const startTailoring = async (
+    resumeId: string,
+    jobDesc: string,
+    evaluationId?: string,
+  ) => {
     setIsTailoring(true);
     setErrorMessage(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
 
     try {
-      const res = await tailorResume(resumeId, jobDesc);
+      const activeEvalId =
+        evaluationId || currentEvaluationId || undefined;
+      const res = await tailorResume(
+        resumeId,
+        jobDesc,
+        [],
+        [],
+        undefined,
+        activeEvalId,
+      );
 
       if (res.success && res.data) {
         setTailoredResult(res.data);
+        if (res.data.atsEvaluationId) {
+          setCurrentEvaluationId(res.data.atsEvaluationId);
+        }
         window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
         setErrorMessage(
@@ -187,7 +214,11 @@ function TailorPageContent() {
       );
       return;
     }
-    startTailoring(selectedResume.id, jobDescription.trim());
+    startTailoring(
+      selectedResume.id,
+      jobDescription.trim(),
+      currentEvaluationId || undefined,
+    );
   };
 
   // 4. Handle Skill Recalculation
@@ -201,11 +232,17 @@ function TailorPageContent() {
     setErrorMessage(null);
 
     try {
+      const activeEvalId =
+        tailoredResult?.atsEvaluationId ||
+        currentEvaluationId ||
+        undefined;
       const res = await tailorResume(
         selectedResume.id,
         jobDescription.trim(),
         confirmedSkills,
         rejectedSkills,
+        tailoredResult?.tailoredResumeId,
+        activeEvalId,
       );
 
       if (res.success && res.data) {

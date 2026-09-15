@@ -1,19 +1,26 @@
 import {
   Body,
   Controller,
+  Delete,
+  Get,
   Headers,
   HttpCode,
   HttpStatus,
+  Param,
   Post,
+  Query,
   UnauthorizedException,
 } from '@nestjs/common';
 import {
   ApiHeader,
   ApiOperation,
+  ApiParam,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 
+import { AtsEvaluation } from '../entities/ats-evaluation.entity';
 import { AtsScoreResponseDto } from '../models/ats-score-response.dto';
 import { CheckAtsScoreDto } from '../models/check-ats-score.dto';
 import {
@@ -152,4 +159,92 @@ export class AtsScoreController {
       resumeId: updated.id,
     };
   }
+
+  @Get('history')
+  @ApiOperation({
+    summary: 'Retrieve historical ATS evaluations for the authenticated user',
+    description:
+      'Fetches past ATS evaluations, optionally filtered by resume ID, ordered by creation date descending.',
+  })
+  @ApiQuery({
+    name: 'resumeId',
+    required: false,
+    description: 'Filter evaluations by specific resume UUID',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Maximum number of records to return (default 20, max 50)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of historical ATS evaluations',
+    type: [AtsEvaluation],
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getEvaluationHistory(
+    @Headers() headers: Record<string, string | undefined>,
+    @Query('resumeId') resumeId?: string,
+    @Query('limit') limit?: string,
+  ): Promise<AtsEvaluation[]> {
+    const userIdentifier = this.extractUserIdentifier(headers);
+    const parsedLimit = limit ? parseInt(limit, 10) : 20;
+    return this.atsScoreService.getEvaluationHistory(
+      userIdentifier,
+      resumeId,
+      isNaN(parsedLimit) ? 20 : parsedLimit,
+    );
+  }
+
+  @Get('history/:id')
+  @ApiOperation({
+    summary: 'Retrieve a specific saved ATS evaluation by its UUID',
+    description:
+      'Returns the full saved ATS evaluation details including keywords, strengths, and recommendations.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Evaluation UUID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'ATS evaluation details',
+    type: AtsEvaluation,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - User does not own this evaluation' })
+  @ApiResponse({ status: 404, description: 'Not Found - Evaluation not found' })
+  async getEvaluationById(
+    @Headers() headers: Record<string, string | undefined>,
+    @Param('id') id: string,
+  ): Promise<AtsEvaluation> {
+    const userIdentifier = this.extractUserIdentifier(headers);
+    return this.atsScoreService.getEvaluationById(userIdentifier, id);
+  }
+
+  @Delete('history/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Delete a historical ATS evaluation record',
+    description: 'Removes a specific ATS evaluation from user history.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Evaluation UUID to delete',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Evaluation successfully deleted',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - User does not own this evaluation' })
+  @ApiResponse({ status: 404, description: 'Not Found - Evaluation not found' })
+  async deleteEvaluation(
+    @Headers() headers: Record<string, string | undefined>,
+    @Param('id') id: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const userIdentifier = this.extractUserIdentifier(headers);
+    return this.atsScoreService.deleteEvaluation(userIdentifier, id);
+  }
 }
+

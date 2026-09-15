@@ -47,14 +47,27 @@ export function ResumeCard({ resume, onDeleteClick }: ResumeCardProps) {
       <div>
         {/* Header Badges */}
         <div className="mb-3.5 flex items-center justify-between gap-2">
-          <div className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700 border border-indigo-100/80">
-            <Briefcase className="h-3 w-3 text-indigo-600" />
-            <span className="truncate max-w-[180px] sm:max-w-[220px]">
-              {resume.position || "General"}
-            </span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700 border border-indigo-100/80">
+              <Briefcase className="h-3 w-3 text-indigo-600" />
+              <span className="truncate max-w-[140px] sm:max-w-[180px]">
+                {resume.position || "General"}
+              </span>
+            </div>
+
+            {resume.resumeType === "tailored" ? (
+              <span className="inline-flex items-center gap-1 rounded-lg bg-purple-50 border border-purple-200 px-2 py-1 text-[11px] font-bold text-purple-700 shadow-2xs">
+                <Sparkles className="h-3 w-3 text-purple-600" />
+                <span>Tailored</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 border border-slate-200/80 px-2 py-1 text-[11px] font-medium text-slate-600">
+                Base
+              </span>
+            )}
           </div>
 
-          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400">
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400 shrink-0">
             <Clock className="h-3 w-3" />
             <span>{formatTimeAgo(resume.updatedAt)}</span>
           </span>

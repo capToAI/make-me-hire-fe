@@ -12,6 +12,8 @@ import { Repository } from 'typeorm';
 import { Account } from '../../users/entities/account.entity';
 import { User } from '../../users/entities/user.entity';
 import { Resume } from '../../resumes/entities/resume.entity';
+import { AtsEvaluation } from '../entities/ats-evaluation.entity';
+import { AtsAnalyzerTool } from '../agent/tools/ats-analyzer.tool';
 import { AtsCheckAgent } from '../agent/ats-check.agent';
 import { ResumeTailorAgent } from '../agent/resume-tailor.agent';
 import { AtsScoreResponseDto } from '../models/ats-score-response.dto';
@@ -37,8 +39,11 @@ export class AtsScoreService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Account)
     private readonly accountRepository: Repository<Account>,
+    @InjectRepository(AtsEvaluation)
+    private readonly atsEvaluationRepository: Repository<AtsEvaluation>,
     private readonly atsCheckAgent: AtsCheckAgent,
     private readonly resumeTailorAgent: ResumeTailorAgent,
+    private readonly analyzerTool: AtsAnalyzerTool,
   ) {}
 
   /**
@@ -239,6 +244,63 @@ export class AtsScoreService {
   }
 
   /**
+   * Extracts all explicit candidate skills, technologies, and certifications directly
+   * from the resume JSON state across any profession (tech, healthcare, accounting, etc.).
+   */
+  extractExplicitCandidateSkills(data: any): string[] {
+    if (!data || typeof data !== 'object') return [];
+
+    const skills = new Set<string>();
+    const sections = data.sections || {};
+
+    Object.values(sections).forEach((section: any) => {
+      if (!section) return;
+
+      // 1. Skills section items
+      if (section.type === 'skills' && Array.isArray(section.data?.items)) {
+        section.data.items.forEach((item: any) => {
+          if (typeof item === 'string' && item.trim()) {
+            skills.add(item.trim());
+          }
+        });
+      }
+
+      // 2. Projects technology tags
+      if (section.type === 'projects' && Array.isArray(section.data?.entries)) {
+        section.data.entries.forEach((entry: any) => {
+          if (Array.isArray(entry.technologies)) {
+            entry.technologies.forEach((tech: any) => {
+              if (typeof tech === 'string' && tech.trim()) {
+                skills.add(tech.trim());
+              }
+            });
+          }
+        });
+      }
+
+      // 3. Certifications titles/names
+      if (section.type === 'certifications' && Array.isArray(section.data?.entries)) {
+        section.data.entries.forEach((entry: any) => {
+          if (typeof entry.name === 'string' && entry.name.trim()) {
+            skills.add(entry.name.trim());
+          }
+        });
+      }
+
+      // 4. Custom section headings or items if designated as skills/tools
+      if (section.type === 'custom' && Array.isArray(section.data?.entries)) {
+        section.data.entries.forEach((entry: any) => {
+          if (typeof entry.heading === 'string' && entry.heading.trim().length <= 40) {
+            skills.add(entry.heading.trim());
+          }
+        });
+      }
+    });
+
+    return Array.from(skills);
+  }
+
+  /**
    * Conducts a complete ATS score evaluation for a user's resume against a job description.
    * Validates authentication and resume ownership before invoking the AI agent.
    *
@@ -268,6 +330,7 @@ export class AtsScoreService {
     }
 
     const structuredResumeText = this.convertResumeToStructuredText(resume.data);
+    const explicitSkills = this.extractExplicitCandidateSkills(resume.data);
 
     if (!structuredResumeText.trim()) {
       this.logger.warn(`Resume ${dto.resumeId} has empty content`);
@@ -284,9 +347,32 @@ export class AtsScoreService {
         name: resume.name,
         position: resume.position,
       },
+      explicitSkills,
     );
 
+    // Persist ATS evaluation to history
+    const evaluation = this.atsEvaluationRepository.create({
+      userId: user.id,
+      resumeId: resume.id,
+      jobTitle: resume.position || 'Target Role',
+      jobDescription: dto.jobDescription,
+      score: analysis.score,
+      rank: analysis.rank,
+      summary: analysis.summary,
+      matchedKeywords: analysis.matchedKeywords || [],
+      missingKeywords: analysis.missingKeywords || [],
+      matchedSkills: analysis.matchedSkills || [],
+      missingSkills: analysis.missingSkills || [],
+      strengths: analysis.strengths || [],
+      improvements: analysis.improvements || [],
+      recommendations: analysis.recommendations || [],
+    });
+
+    const savedEvaluation = await this.atsEvaluationRepository.save(evaluation);
+    this.logger.log(`Persisted ATS evaluation ${savedEvaluation.id} for Resume ${resume.id}`);
+
     return {
+      id: savedEvaluation.id,
       score: analysis.score,
       rank: analysis.rank,
       summary: analysis.summary,
@@ -300,7 +386,9 @@ export class AtsScoreService {
       resumeId: resume.id,
       resumeName: resume.name,
       position: resume.position,
-      analyzedAt: new Date().toISOString(),
+      analyzedAt: savedEvaluation.createdAt
+        ? savedEvaluation.createdAt.toISOString()
+        : new Date().toISOString(),
     };
   }
 
@@ -335,6 +423,7 @@ export class AtsScoreService {
 
     // 1. Calculate baseline ATS score of original resume against the job description
     const originalResumeText = this.convertResumeToStructuredText(resume.data);
+    const originalExplicitSkills = this.extractExplicitCandidateSkills(resume.data);
     const originalAnalysis = await this.atsCheckAgent.analyzeResume(
       originalResumeText,
       dto.jobDescription,
@@ -342,6 +431,7 @@ export class AtsScoreService {
         name: resume.name,
         position: resume.position,
       },
+      originalExplicitSkills,
     );
 
     // 2. Invoke Resume Tailoring Agent with full matched and missing context
@@ -375,6 +465,9 @@ export class AtsScoreService {
     const tailoredResumeText = this.convertResumeToStructuredText(
       tailoredAgentResult.tailoredResumeData,
     );
+    const tailoredExplicitSkills = this.extractExplicitCandidateSkills(
+      tailoredAgentResult.tailoredResumeData,
+    );
 
     // Extract tailored position from basic section if updated to secure title bonus
     let tailoredPosition = resume.position;
@@ -392,16 +485,86 @@ export class AtsScoreService {
         name: resume.name,
         position: tailoredPosition,
       },
+      tailoredExplicitSkills,
     );
 
-    // Ensure tailored score reflects improvements while being bounded
-    let tailoredScore = Math.max(originalAnalysis.score, tailoredAnalysis.score);
-    // If user confirmed skills were added or content was enhanced, guarantee a positive ATS boost if reasonable
-    if ((dto.confirmedSkills && dto.confirmedSkills.length > 0) && tailoredScore <= originalAnalysis.score) {
-      tailoredScore = Math.min(98, originalAnalysis.score + dto.confirmedSkills.length * 4);
+    // Calculate authentic confirmed skill score impact from the ATS analyzer
+    let confirmedSkillsImpact = 0;
+    if (Array.isArray(dto.confirmedSkills) && dto.confirmedSkills.length > 0) {
+      const totalEstimatedSkills = Math.max(
+        10,
+        (originalAnalysis.matchedSkills?.length || 0) + (originalAnalysis.missingSkills?.length || 0),
+      );
+      dto.confirmedSkills.forEach((skill) => {
+        confirmedSkillsImpact += this.analyzerTool.calculateSkillMarginalImpact(
+          skill,
+          totalEstimatedSkills,
+          dto.jobDescription,
+        );
+      });
+    }
+
+    // Determine final tailored score:
+    // Tailored score reflects authentic baseline score plus exact marginal point impact of confirmed skills
+    const baseProgressScore = Math.max(originalAnalysis.score, tailoredAnalysis.score);
+    let tailoredScore = baseProgressScore;
+    if (confirmedSkillsImpact > 0) {
+      tailoredScore = Math.min(98, originalAnalysis.score + confirmedSkillsImpact);
     }
     tailoredScore = Math.max(0, Math.min(100, tailoredScore));
     const scoreDifference = tailoredScore - originalAnalysis.score;
+
+    // Persist or update the tailored resume in the resumes table
+    let savedTailoredResume: Resume;
+
+    if (dto.tailoredResumeId) {
+      // Update existing tailored resume
+      const existing = await this.resumeRepository.findOne({
+        where: { id: dto.tailoredResumeId, user_id: user.id },
+      });
+      if (existing) {
+        existing.data = tailoredAgentResult.tailoredResumeData;
+        existing.position = tailoredPosition;
+        if (dto.atsEvaluationId) {
+          existing.ats_evaluation_id = dto.atsEvaluationId;
+        }
+        existing.updated_at = new Date();
+        savedTailoredResume = await this.resumeRepository.save(existing);
+        this.logger.log(
+          `Updated tailored resume ${savedTailoredResume.id} for user ${user.id}`,
+        );
+      } else {
+        // Fallback: create if specified ID not found
+        const newRecord = this.resumeRepository.create({
+          user_id: user.id,
+          name: `${resume.name} (Tailored)`,
+          position: tailoredPosition,
+          data: tailoredAgentResult.tailoredResumeData,
+          resume_type: 'tailored',
+          parent_resume_id: resume.id,
+          ats_evaluation_id: dto.atsEvaluationId || null,
+        });
+        savedTailoredResume = await this.resumeRepository.save(newRecord);
+        this.logger.log(
+          `Created new tailored resume ${savedTailoredResume.id} for user ${user.id}`,
+        );
+      }
+    } else {
+      // First-time tailoring: create brand-new tailored resume entry
+      const newRecord = this.resumeRepository.create({
+        user_id: user.id,
+        name: `${resume.name} (Tailored)`,
+        position: tailoredPosition,
+        data: tailoredAgentResult.tailoredResumeData,
+        resume_type: 'tailored',
+        parent_resume_id: resume.id,
+        ats_evaluation_id: dto.atsEvaluationId || null,
+      });
+      savedTailoredResume = await this.resumeRepository.save(newRecord);
+      this.logger.log(
+        `Created new tailored resume ${savedTailoredResume.id} for user ${user.id}`,
+      );
+    }
 
     return {
       originalScore: originalAnalysis.score,
@@ -413,10 +576,27 @@ export class AtsScoreService {
       tailoredResumeData: tailoredAgentResult.tailoredResumeData,
       changes: tailoredAgentResult.changes,
       suggestedSkills: tailoredAgentResult.suggestedSkills,
+      matchedKeywords: tailoredAnalysis.matchedKeywords?.length
+        ? tailoredAnalysis.matchedKeywords
+        : originalAnalysis.matchedKeywords,
+      missingKeywords: tailoredAnalysis.missingKeywords?.length
+        ? tailoredAnalysis.missingKeywords
+        : originalAnalysis.missingKeywords,
+      matchedSkills: tailoredAnalysis.matchedSkills?.length
+        ? tailoredAnalysis.matchedSkills
+        : originalAnalysis.matchedSkills,
+      missingSkills: tailoredAnalysis.missingSkills?.length
+        ? tailoredAnalysis.missingSkills
+        : originalAnalysis.missingSkills,
       resumeId: resume.id,
+      tailoredResumeId: savedTailoredResume.id,
+      atsEvaluationId:
+        savedTailoredResume.ats_evaluation_id || dto.atsEvaluationId || undefined,
       resumeName: resume.name,
       position: tailoredPosition,
-      tailoredAt: new Date().toISOString(),
+      tailoredAt: savedTailoredResume.updated_at
+        ? savedTailoredResume.updated_at.toISOString()
+        : new Date().toISOString(),
     };
   }
 
@@ -462,5 +642,81 @@ export class AtsScoreService {
     this.logger.log(`Successfully applied tailored resume ${resume.id} for user ${user.id}`);
     return saved;
   }
+
+  /**
+   * Retrieves ATS evaluation history for an authenticated user, optionally filtered by resume.
+   */
+  async getEvaluationHistory(
+    userIdentifier: string | number,
+    resumeId?: string,
+    limit: number = 20,
+  ): Promise<AtsEvaluation[]> {
+    const user = await this.resolveUser(userIdentifier);
+
+    const query = this.atsEvaluationRepository
+      .createQueryBuilder('eval')
+      .leftJoinAndSelect('eval.resume', 'resume')
+      .where('eval.userId = :userId', { userId: user.id })
+      .orderBy('eval.createdAt', 'DESC')
+      .take(Math.min(Math.max(1, limit), 50));
+
+    if (resumeId) {
+      query.andWhere('eval.resumeId = :resumeId', { resumeId });
+    }
+
+    return query.getMany();
+  }
+
+  /**
+   * Retrieves a specific saved ATS evaluation by its UUID, enforcing user ownership.
+   */
+  async getEvaluationById(
+    userIdentifier: string | number,
+    evaluationId: string,
+  ): Promise<AtsEvaluation> {
+    const user = await this.resolveUser(userIdentifier);
+
+    const evaluation = await this.atsEvaluationRepository.findOne({
+      where: { id: evaluationId },
+      relations: ['resume'],
+    });
+
+    if (!evaluation) {
+      throw new NotFoundException(`Evaluation with ID ${evaluationId} was not found`);
+    }
+
+    if (evaluation.userId !== user.id) {
+      throw new ForbiddenException('You do not have permission to view this evaluation');
+    }
+
+    return evaluation;
+  }
+
+  /**
+   * Deletes a saved ATS evaluation record, enforcing user ownership.
+   */
+  async deleteEvaluation(
+    userIdentifier: string | number,
+    evaluationId: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const user = await this.resolveUser(userIdentifier);
+
+    const evaluation = await this.atsEvaluationRepository.findOne({
+      where: { id: evaluationId },
+    });
+
+    if (!evaluation) {
+      throw new NotFoundException(`Evaluation with ID ${evaluationId} was not found`);
+    }
+
+    if (evaluation.userId !== user.id) {
+      throw new ForbiddenException('You do not have permission to delete this evaluation');
+    }
+
+    await this.atsEvaluationRepository.remove(evaluation);
+    this.logger.log(`Deleted ATS evaluation ${evaluationId} for user ${user.id}`);
+    return { success: true, message: 'Evaluation deleted successfully' };
+  }
 }
+
 

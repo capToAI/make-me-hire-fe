@@ -16,6 +16,13 @@ export type AtsMatchRank =
  */
 export class AtsScoreResponseDto {
   @ApiProperty({
+    description: 'Unique UUID of the stored ATS evaluation record',
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    required: false,
+  })
+  id?: string;
+
+  @ApiProperty({
     description: 'Overall ATS compatibility score from 0 to 100',
     example: 82,
     minimum: 0,

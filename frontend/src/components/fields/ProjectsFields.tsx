@@ -331,14 +331,14 @@ export function ProjectsFields({
                   </div>
 
                   <div>
-                    <label className={labelClass}>Link (GitHub / demo)</label>
+                    <label className={labelClass}>Link (Portfolio / Demo / URL)</label>
                     <input
                       className={inputClass}
                       value={entry.link || ""}
                       onChange={(e) =>
                         updateEntry(entry.id, { link: e.target.value })
                       }
-                      placeholder="github.com/you/project"
+                      placeholder="e.g. portfolio.com, github.com/project"
                     />
                   </div>
                 </div>
@@ -420,10 +420,10 @@ export function ProjectsFields({
                   </p>
                 </div>
 
-                {/* Technologies Section */}
+                {/* Tools & Technologies Section */}
                 <div className="space-y-2.5 pt-2 border-t border-slate-100">
                   <label className="text-xs font-bold text-slate-800">
-                    Technologies
+                    Tools & Technologies
                   </label>
 
                   {/* Technology Input Row */}
@@ -443,7 +443,7 @@ export function ProjectsFields({
                           addTechnology(entry.id);
                         }
                       }}
-                      placeholder="e.g. Next.js, PostgreSQL"
+                      placeholder="e.g. React, Figma, HubSpot, Excel, Python"
                     />
 
                     <button

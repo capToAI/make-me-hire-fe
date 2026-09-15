@@ -101,35 +101,30 @@ export function LanguagesFields({
                   <Award className="h-3.5 w-3.5 text-slate-400" />
                   Proficiency
                 </label>
-                <div className="flex gap-2">
-                  <input
-                    className={inputClass}
-                    value={entry.proficiency}
-                    onChange={(e) =>
-                      updateEntry(entry.id, { proficiency: e.target.value })
-                    }
-                    placeholder="Native, Fluent, B2..."
-                  />
-                  <select
-                    className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs font-semibold text-slate-700 hover:border-slate-300 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer shrink-0"
-                    value={
-                      PROFICIENCY_OPTIONS.includes(entry.proficiency)
-                        ? entry.proficiency
-                        : ""
-                    }
-                    onChange={(e) =>
-                      e.target.value &&
-                      updateEntry(entry.id, { proficiency: e.target.value })
-                    }
-                  >
-                    <option value="">Presets</option>
-                    {PROFICIENCY_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
+                <select
+                  className={`${inputClass} cursor-pointer ${
+                    !entry.proficiency ? "text-slate-400" : "text-slate-800"
+                  }`}
+                  value={entry.proficiency || ""}
+                  onChange={(e) =>
+                    updateEntry(entry.id, { proficiency: e.target.value })
+                  }
+                >
+                  <option value="" className="text-slate-400">
+                    Select proficiency
+                  </option>
+                  {!PROFICIENCY_OPTIONS.includes(entry.proficiency) &&
+                    entry.proficiency && (
+                      <option value={entry.proficiency} className="text-slate-800">
+                        {entry.proficiency}
                       </option>
-                    ))}
-                  </select>
-                </div>
+                    )}
+                  {PROFICIENCY_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt} className="text-slate-800">
+                      {opt}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>

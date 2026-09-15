@@ -74,12 +74,14 @@ export class AtsCheckAgent {
    * @param {string} resumeText - Textual structured representation of the candidate resume.
    * @param {string} jobDescription - Target employer job description.
    * @param {{ name?: string; position?: string }} metadata - Resume title and position context.
+   * @param {string[]} candidateExplicitSkills - Pre-extracted skills directly from the resume JSON.
    * @returns {Promise<AtsAnalysisData>} Structured ATS score and analysis metrics.
    */
   async analyzeResume(
     resumeText: string,
     jobDescription: string,
     metadata?: { name?: string; position?: string },
+    candidateExplicitSkills: string[] = [],
   ): Promise<AtsAnalysisData> {
     const apiKey = process.env.OPENAI_API_KEY;
 
@@ -91,6 +93,7 @@ export class AtsCheckAgent {
         resumeText,
         jobDescription,
         metadata,
+        candidateExplicitSkills,
       );
     }
 
@@ -127,9 +130,14 @@ export class AtsCheckAgent {
       const matchedSkills = Array.from(new Set(result.matchedSkills || []));
       const matchedKeywords = Array.from(new Set(result.matchedKeywords || []));
 
-      // Extract detected skills from candidate resume to ensure possessed skills are never marked missing
-      const detectedResumeSkills = this.analyzerTool.findSkills(resumeText);
-      const allCandidateSkills = [...detectedResumeSkills, ...matchedSkills];
+      // Extract detected skills from candidate resume and combine with explicit skills
+      const detectedResumeSkills = this.analyzerTool.extractSkillsFromResume(
+        resumeText,
+        candidateExplicitSkills,
+      );
+      const allCandidateSkills = Array.from(
+        new Set([...candidateExplicitSkills, ...detectedResumeSkills, ...matchedSkills]),
+      );
 
       // Build lowercase lookup set of all matched tokens
       const matchedTokensLower = new Set([
@@ -178,6 +186,7 @@ export class AtsCheckAgent {
         resumeText,
         jobDescription,
         metadata,
+        candidateExplicitSkills,
       );
     }
   }

@@ -133,6 +133,9 @@ export interface SavedResume {
   data: ResumeState;
   createdAt: string;
   updatedAt: string;
+  resumeType?: "base" | "tailored";
+  parentResumeId?: string | null;
+  atsEvaluationId?: string | null;
 }
 
 export interface ResumeListItem {
@@ -142,6 +145,9 @@ export interface ResumeListItem {
   position: string;
   createdAt: string;
   updatedAt: string;
+  resumeType?: "base" | "tailored";
+  parentResumeId?: string | null;
+  atsEvaluationId?: string | null;
 }
 
 export type AtsMatchRank =
@@ -152,6 +158,7 @@ export type AtsMatchRank =
   | "Low Match";
 
 export interface AtsScoreData {
+  id?: string;
   score: number;
   rank: AtsMatchRank;
   summary: string;
@@ -168,6 +175,30 @@ export interface AtsScoreData {
   analyzedAt: string;
 }
 
+export interface AtsEvaluationRecord {
+  id: string;
+  userId: number;
+  resumeId: string;
+  jobTitle: string;
+  jobDescription: string;
+  score: number;
+  rank: AtsMatchRank;
+  summary: string;
+  matchedKeywords: string[];
+  missingKeywords: string[];
+  matchedSkills: string[];
+  missingSkills: string[];
+  strengths: string[];
+  improvements: string[];
+  recommendations: string[];
+  createdAt: string;
+  resume?: {
+    id: string;
+    name: string;
+    position: string;
+  };
+}
+
 export type SkillRelevance = "high" | "medium" | "low";
 export type SkillStatus = "pending" | "confirmed" | "rejected";
 
@@ -175,6 +206,7 @@ export interface SuggestedSkill {
   name: string;
   reason: string;
   relevance: SkillRelevance;
+  scoreImpact?: number;
   status: SkillStatus;
 }
 
@@ -202,7 +234,13 @@ export interface TailoredResumeResponse {
   tailoredResumeData: ResumeState;
   changes: TailorChangesGroup;
   suggestedSkills: SuggestedSkill[];
+  matchedKeywords?: string[];
+  missingKeywords?: string[];
+  matchedSkills?: string[];
+  missingSkills?: string[];
   resumeId: string;
+  tailoredResumeId?: string;
+  atsEvaluationId?: string;
   resumeName: string;
   position: string;
   tailoredAt: string;

@@ -26,8 +26,22 @@ describe('Skill Aliases Utility', () => {
       expect(areSkillsEquivalent('Postgres', 'PostgreSQL')).toBe(true);
     });
 
-    it('recognizes AWS and Amazon Web Services as equivalent', () => {
+    it('recognizes AWS and Amazon Web Services as equivalent via dynamic acronym', () => {
       expect(areSkillsEquivalent('AWS', 'Amazon Web Services')).toBe(true);
+    });
+
+    it('recognizes Finance acronyms dynamically (GAAP)', () => {
+      expect(areSkillsEquivalent('GAAP', 'Generally Accepted Accounting Principles')).toBe(true);
+    });
+
+    it('recognizes Healthcare acronyms dynamically (BLS, EHR)', () => {
+      expect(areSkillsEquivalent('BLS', 'Basic Life Support')).toBe(true);
+      expect(areSkillsEquivalent('EHR', 'Electronic Health Records')).toBe(true);
+    });
+
+    it('recognizes Marketing acronyms dynamically (SEO, PPC)', () => {
+      expect(areSkillsEquivalent('SEO', 'Search Engine Optimization')).toBe(true);
+      expect(areSkillsEquivalent('PPC', 'Pay Per Click')).toBe(true);
     });
 
     it('does not equate genuinely different skills', () => {
@@ -38,13 +52,22 @@ describe('Skill Aliases Utility', () => {
   });
 
   describe('isSkillCoveredByCandidate', () => {
-    const candidateSkills = ['React', 'TypeScript', 'Tailwind CSS', 'PostgreSQL'];
+    const candidateSkills = [
+      'React',
+      'TypeScript',
+      'Tailwind CSS',
+      'PostgreSQL',
+      'Generally Accepted Accounting Principles',
+      'Basic Life Support',
+    ];
 
     it('returns true when candidate has alias of target skill', () => {
       expect(isSkillCoveredByCandidate('React.js', candidateSkills)).toBe(true);
       expect(isSkillCoveredByCandidate('TS', candidateSkills)).toBe(true);
       expect(isSkillCoveredByCandidate('Postgres', candidateSkills)).toBe(true);
       expect(isSkillCoveredByCandidate('Tailwind', candidateSkills)).toBe(true);
+      expect(isSkillCoveredByCandidate('GAAP', candidateSkills)).toBe(true);
+      expect(isSkillCoveredByCandidate('BLS', candidateSkills)).toBe(true);
     });
 
     it('returns false when candidate does not have skill or alias', () => {
@@ -55,11 +78,12 @@ describe('Skill Aliases Utility', () => {
   });
 
   describe('findMatchingAliasInCandidateSkills', () => {
-    const candidateSkills = ['React', 'TypeScript', 'PostgreSQL'];
+    const candidateSkills = ['React', 'TypeScript', 'PostgreSQL', 'Basic Life Support'];
 
     it('finds original skill for an alias', () => {
       expect(findMatchingAliasInCandidateSkills('React.js', candidateSkills)).toBe('React');
       expect(findMatchingAliasInCandidateSkills('Postgres', candidateSkills)).toBe('PostgreSQL');
+      expect(findMatchingAliasInCandidateSkills('BLS', candidateSkills)).toBe('Basic Life Support');
       expect(findMatchingAliasInCandidateSkills('Docker', candidateSkills)).toBeNull();
     });
   });
