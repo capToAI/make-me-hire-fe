@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -436,30 +437,15 @@ export class AtsScoreService {
       tailoredExplicitSkills,
     );
 
-    // Calculate authentic confirmed skill score impact from the ATS analyzer
-    let confirmedSkillsImpact = 0;
-    if (Array.isArray(dto.confirmedSkills) && dto.confirmedSkills.length > 0) {
-      const totalEstimatedSkills = Math.max(
-        10,
-        (originalAnalysis.matchedSkills?.length || 0) + (originalAnalysis.missingSkills?.length || 0),
-      );
-      dto.confirmedSkills.forEach((skill) => {
-        confirmedSkillsImpact += this.analyzerTool.calculateSkillMarginalImpact(
-          skill,
-          totalEstimatedSkills,
-          dto.jobDescription,
-        );
-      });
-    }
-
-    // Determine final tailored score:
-    // Tailored score reflects authentic baseline score plus exact marginal point impact of confirmed skills
-    const baseProgressScore = Math.max(originalAnalysis.score, tailoredAnalysis.score);
-    let tailoredScore = baseProgressScore;
-    if (confirmedSkillsImpact > 0) {
-      tailoredScore = Math.min(98, originalAnalysis.score + confirmedSkillsImpact);
-    }
-    tailoredScore = Math.max(0, Math.min(100, tailoredScore));
+    // Determine final tailored score: trust the real re-analysis of the actual tailored
+    // resume text (which already has any confirmed skills merged in) rather than a
+    // heuristic point-sum, so the displayed score stays consistent with the tailored
+    // rank and matched/missing skill lists returned alongside it.
+    const tailoredScore = Math.max(
+      originalAnalysis.score,
+      Math.max(0, Math.min(100, tailoredAnalysis.score)),
+    );
+    const tailoredRank = this.analyzerTool.getRankFromScore(tailoredScore);
     const scoreDifference = tailoredScore - originalAnalysis.score;
 
     // Persist or update the tailored resume in the resumes table
@@ -518,7 +504,7 @@ export class AtsScoreService {
       originalScore: originalAnalysis.score,
       originalRank: originalAnalysis.rank,
       tailoredScore,
-      tailoredRank: tailoredAnalysis.rank,
+      tailoredRank,
       scoreDifference,
       originalResumeData: resume.data,
       tailoredResumeData: tailoredAgentResult.tailoredResumeData,
@@ -571,7 +557,7 @@ export class AtsScoreService {
     }
 
     if (!dto.tailoredData || typeof dto.tailoredData !== 'object') {
-      throw new NotFoundException('Invalid tailored resume data provided');
+      throw new BadRequestException('Invalid tailored resume data provided');
     }
 
     resume.data = dto.tailoredData;
