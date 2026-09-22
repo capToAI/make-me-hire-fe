@@ -1,15 +1,14 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { Repository } from 'typeorm';
 
-import { Account } from '../../users/entities/account.entity';
 import { User } from '../../users/entities/user.entity';
 import { Resume } from '../../resumes/entities/resume.entity';
 import { AtsEvaluation } from '../entities/ats-evaluation.entity';
@@ -35,58 +34,12 @@ export class AtsScoreService {
   constructor(
     @InjectRepository(Resume)
     private readonly resumeRepository: Repository<Resume>,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-    @InjectRepository(Account)
-    private readonly accountRepository: Repository<Account>,
     @InjectRepository(AtsEvaluation)
     private readonly atsEvaluationRepository: Repository<AtsEvaluation>,
     private readonly atsCheckAgent: AtsCheckAgent,
     private readonly resumeTailorAgent: ResumeTailorAgent,
     private readonly analyzerTool: AtsAnalyzerTool,
   ) {}
-
-  /**
-   * Resolves the authenticated User entity from a numeric ID, email, or Google provider account ID.
-   *
-   * @param {string | number} userIdentifier - Authenticated user identifier from request headers.
-   * @returns {Promise<User>} Resolved database User entity.
-   */
-  async resolveUser(userIdentifier?: string | number): Promise<User> {
-    if (!userIdentifier) {
-      throw new UnauthorizedException('Authentication required to perform ATS resume analysis');
-    }
-
-    const strId = String(userIdentifier).trim();
-    if (!strId) {
-      throw new UnauthorizedException('Authentication required to perform ATS resume analysis');
-    }
-
-    // 1. Try numeric ID if parseable
-    const numericId = Number(strId);
-    if (!isNaN(numericId) && numericId > 0) {
-      const user = await this.userRepository.findOne({ where: { id: numericId } });
-      if (user) return user;
-    }
-
-    // 2. Try email
-    if (strId.includes('@')) {
-      const user = await this.userRepository.findOne({ where: { email: strId } });
-      if (user) return user;
-    }
-
-    // 3. Try Google Provider Account ID
-    const account = await this.accountRepository.findOne({
-      where: { provider_account_id: strId },
-      relations: ['user'],
-    });
-    if (account?.user) {
-      return account.user;
-    }
-
-    this.logger.warn(`User could not be resolved from identifier: ${userIdentifier}`);
-    throw new UnauthorizedException('Authenticated user was not found');
-  }
 
   /**
    * Serializes raw resume JSON state into a human-readable, structured textual format
@@ -302,18 +255,16 @@ export class AtsScoreService {
 
   /**
    * Conducts a complete ATS score evaluation for a user's resume against a job description.
-   * Validates authentication and resume ownership before invoking the AI agent.
+   * Validates resume ownership before invoking the AI agent.
    *
-   * @param {string | number} userIdentifier - Authenticated user identifier.
+   * @param {User} user - Authenticated user, resolved and verified by AuthGuard.
    * @param {CheckAtsScoreDto} dto - Request containing resumeId and jobDescription.
    * @returns {Promise<AtsScoreResponseDto>} Structured ATS compatibility score response.
    */
   async checkAtsScore(
-    userIdentifier: string | number,
+    user: User,
     dto: CheckAtsScoreDto,
   ): Promise<AtsScoreResponseDto> {
-    const user = await this.resolveUser(userIdentifier);
-
     const resume = await this.resumeRepository.findOne({
       where: { id: dto.resumeId },
     });
@@ -397,11 +348,9 @@ export class AtsScoreService {
    * Compares ATS scores before and after tailoring and enforces factual integrity.
    */
   async tailorResume(
-    userIdentifier: string | number,
+    user: User,
     dto: TailorResumeDto,
   ): Promise<TailoredResumeResponseDto> {
-    const user = await this.resolveUser(userIdentifier);
-
     const resume = await this.resumeRepository.findOne({
       where: { id: dto.resumeId },
     });
@@ -488,30 +437,15 @@ export class AtsScoreService {
       tailoredExplicitSkills,
     );
 
-    // Calculate authentic confirmed skill score impact from the ATS analyzer
-    let confirmedSkillsImpact = 0;
-    if (Array.isArray(dto.confirmedSkills) && dto.confirmedSkills.length > 0) {
-      const totalEstimatedSkills = Math.max(
-        10,
-        (originalAnalysis.matchedSkills?.length || 0) + (originalAnalysis.missingSkills?.length || 0),
-      );
-      dto.confirmedSkills.forEach((skill) => {
-        confirmedSkillsImpact += this.analyzerTool.calculateSkillMarginalImpact(
-          skill,
-          totalEstimatedSkills,
-          dto.jobDescription,
-        );
-      });
-    }
-
-    // Determine final tailored score:
-    // Tailored score reflects authentic baseline score plus exact marginal point impact of confirmed skills
-    const baseProgressScore = Math.max(originalAnalysis.score, tailoredAnalysis.score);
-    let tailoredScore = baseProgressScore;
-    if (confirmedSkillsImpact > 0) {
-      tailoredScore = Math.min(98, originalAnalysis.score + confirmedSkillsImpact);
-    }
-    tailoredScore = Math.max(0, Math.min(100, tailoredScore));
+    // Determine final tailored score: trust the real re-analysis of the actual tailored
+    // resume text (which already has any confirmed skills merged in) rather than a
+    // heuristic point-sum, so the displayed score stays consistent with the tailored
+    // rank and matched/missing skill lists returned alongside it.
+    const tailoredScore = Math.max(
+      originalAnalysis.score,
+      Math.max(0, Math.min(100, tailoredAnalysis.score)),
+    );
+    const tailoredRank = this.analyzerTool.getRankFromScore(tailoredScore);
     const scoreDifference = tailoredScore - originalAnalysis.score;
 
     // Persist or update the tailored resume in the resumes table
@@ -570,7 +504,7 @@ export class AtsScoreService {
       originalScore: originalAnalysis.score,
       originalRank: originalAnalysis.rank,
       tailoredScore,
-      tailoredRank: tailoredAnalysis.rank,
+      tailoredRank,
       scoreDifference,
       originalResumeData: resume.data,
       tailoredResumeData: tailoredAgentResult.tailoredResumeData,
@@ -604,11 +538,9 @@ export class AtsScoreService {
    * Applies tailored resume content to the persistent database record.
    */
   async applyTailoredResume(
-    userIdentifier: string | number,
+    user: User,
     dto: ApplyTailoredResumeDto,
   ): Promise<Resume> {
-    const user = await this.resolveUser(userIdentifier);
-
     const resume = await this.resumeRepository.findOne({
       where: { id: dto.resumeId },
     });
@@ -625,7 +557,7 @@ export class AtsScoreService {
     }
 
     if (!dto.tailoredData || typeof dto.tailoredData !== 'object') {
-      throw new NotFoundException('Invalid tailored resume data provided');
+      throw new BadRequestException('Invalid tailored resume data provided');
     }
 
     resume.data = dto.tailoredData;
@@ -647,12 +579,10 @@ export class AtsScoreService {
    * Retrieves ATS evaluation history for an authenticated user, optionally filtered by resume.
    */
   async getEvaluationHistory(
-    userIdentifier: string | number,
+    user: User,
     resumeId?: string,
     limit: number = 20,
   ): Promise<AtsEvaluation[]> {
-    const user = await this.resolveUser(userIdentifier);
-
     const query = this.atsEvaluationRepository
       .createQueryBuilder('eval')
       .leftJoinAndSelect('eval.resume', 'resume')
@@ -671,11 +601,9 @@ export class AtsScoreService {
    * Retrieves a specific saved ATS evaluation by its UUID, enforcing user ownership.
    */
   async getEvaluationById(
-    userIdentifier: string | number,
+    user: User,
     evaluationId: string,
   ): Promise<AtsEvaluation> {
-    const user = await this.resolveUser(userIdentifier);
-
     const evaluation = await this.atsEvaluationRepository.findOne({
       where: { id: evaluationId },
       relations: ['resume'],
@@ -696,11 +624,9 @@ export class AtsScoreService {
    * Deletes a saved ATS evaluation record, enforcing user ownership.
    */
   async deleteEvaluation(
-    userIdentifier: string | number,
+    user: User,
     evaluationId: string,
   ): Promise<{ success: boolean; message: string }> {
-    const user = await this.resolveUser(userIdentifier);
-
     const evaluation = await this.atsEvaluationRepository.findOne({
       where: { id: evaluationId },
     });

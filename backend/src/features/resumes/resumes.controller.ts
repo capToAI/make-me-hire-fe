@@ -3,22 +3,24 @@ import {
   Controller,
   Delete,
   Get,
-  Headers,
   HttpCode,
   HttpStatus,
   Param,
   Post,
   Put,
   Query,
-  UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
 import {
-  ApiHeader,
+  ApiBearerAuth,
   ApiOperation,
   ApiParam,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { AuthGuard } from '../../shared/auth/auth.guard';
+import { CurrentUser } from '../../shared/auth/current-user.decorator';
+import { User } from '../users/entities/user.entity';
 import { CreateResumeDto } from './dto/create-resume.dto';
 import { UpdateResumeDto } from './dto/update-resume.dto';
 import { ResumeListItemDto, ResumeResponseDto } from './dto/resume-response.dto';
@@ -30,36 +32,10 @@ import { ResumesService } from './resumes.service';
  */
 @ApiTags('Resumes')
 @Controller('api/resumes')
-@ApiHeader({
-  name: 'x-user-id',
-  description: 'Authenticated User ID or Email',
-  required: false,
-})
+@ApiBearerAuth()
+@UseGuards(AuthGuard)
 export class ResumesController {
   constructor(private readonly resumesService: ResumesService) {}
-
-  /**
-   * Helper to extract the authenticated user identifier from request headers.
-   */
-  private extractUserIdentifier(headers: Record<string, string | undefined>): string {
-    const xUserId = headers['x-user-id'] || headers['X-User-Id'];
-    if (xUserId && xUserId.trim()) {
-      return xUserId.trim();
-    }
-
-    const xUserEmail = headers['x-user-email'] || headers['X-User-Email'];
-    if (xUserEmail && xUserEmail.trim()) {
-      return xUserEmail.trim();
-    }
-
-    const authHeader = headers['authorization'] || headers['Authorization'];
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7).trim();
-      if (token) return token;
-    }
-
-    throw new UnauthorizedException('Authentication required. Missing x-user-id or Authorization header.');
-  }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -76,11 +52,10 @@ export class ResumesController {
   @ApiResponse({ status: 400, description: 'Bad Request - Validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized - User not authenticated' })
   async createResume(
-    @Headers() headers: Record<string, string | undefined>,
+    @CurrentUser() user: User,
     @Body() dto: CreateResumeDto,
   ): Promise<ResumeResponseDto> {
-    const userIdentifier = this.extractUserIdentifier(headers);
-    return this.resumesService.createResume(userIdentifier, dto);
+    return this.resumesService.createResume(user, dto);
   }
 
   @Get()
@@ -97,11 +72,10 @@ export class ResumesController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized - User not authenticated' })
   async getUserResumes(
-    @Headers() headers: Record<string, string | undefined>,
+    @CurrentUser() user: User,
     @Query('type') type?: 'base' | 'tailored',
   ): Promise<ResumeListItemDto[]> {
-    const userIdentifier = this.extractUserIdentifier(headers);
-    return this.resumesService.getUserResumes(userIdentifier, type);
+    return this.resumesService.getUserResumes(user, type);
   }
 
   @Get(':id')
@@ -121,11 +95,10 @@ export class ResumesController {
   @ApiResponse({ status: 403, description: 'Forbidden - User does not own this resume' })
   @ApiResponse({ status: 404, description: 'Not Found - Resume not found' })
   async getResumeById(
-    @Headers() headers: Record<string, string | undefined>,
+    @CurrentUser() user: User,
     @Param('id') id: string,
   ): Promise<ResumeResponseDto> {
-    const userIdentifier = this.extractUserIdentifier(headers);
-    return this.resumesService.getResumeById(userIdentifier, id);
+    return this.resumesService.getResumeById(user, id);
   }
 
   @Put(':id')
@@ -146,12 +119,11 @@ export class ResumesController {
   @ApiResponse({ status: 403, description: 'Forbidden - User does not own this resume' })
   @ApiResponse({ status: 404, description: 'Not Found - Resume not found' })
   async updateResume(
-    @Headers() headers: Record<string, string | undefined>,
+    @CurrentUser() user: User,
     @Param('id') id: string,
     @Body() dto: UpdateResumeDto,
   ): Promise<ResumeResponseDto> {
-    const userIdentifier = this.extractUserIdentifier(headers);
-    return this.resumesService.updateResume(userIdentifier, id, dto);
+    return this.resumesService.updateResume(user, id, dto);
   }
 
   @Delete(':id')
@@ -170,10 +142,9 @@ export class ResumesController {
   @ApiResponse({ status: 403, description: 'Forbidden - User does not own this resume' })
   @ApiResponse({ status: 404, description: 'Not Found - Resume not found' })
   async deleteResume(
-    @Headers() headers: Record<string, string | undefined>,
+    @CurrentUser() user: User,
     @Param('id') id: string,
   ): Promise<{ success: boolean; message: string }> {
-    const userIdentifier = this.extractUserIdentifier(headers);
-    return this.resumesService.deleteResume(userIdentifier, id);
+    return this.resumesService.deleteResume(user, id);
   }
 }

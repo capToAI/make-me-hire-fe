@@ -1,10 +1,9 @@
-import { ForbiddenException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 
 import { Repository } from 'typeorm';
 
-import { Account } from '../../users/entities/account.entity';
 import { User } from '../../users/entities/user.entity';
 import { Resume } from '../../resumes/entities/resume.entity';
 import { AtsEvaluation } from '../entities/ats-evaluation.entity';
@@ -16,9 +15,8 @@ import { AtsScoreService } from './ats-score.service';
 
 describe('AtsScoreService', () => {
   let service: AtsScoreService;
+  let analyzerTool: AtsAnalyzerTool;
   let mockResumeRepo: Partial<Record<keyof Repository<Resume>, jest.Mock>>;
-  let mockUserRepo: Partial<Record<keyof Repository<User>, jest.Mock>>;
-  let mockAccountRepo: Partial<Record<keyof Repository<Account>, jest.Mock>>;
   let mockAtsEvaluationRepo: Partial<Record<keyof Repository<AtsEvaluation>, jest.Mock>>;
 
   const mockUser: User = {
@@ -71,15 +69,6 @@ describe('AtsScoreService', () => {
   };
 
   beforeEach(async () => {
-    mockUserRepo = {
-      findOne: jest.fn().mockImplementation(async ({ where }: any) => {
-        if (where.id === 1 || where.email === 'test@example.com') {
-          return mockUser;
-        }
-        return null;
-      }),
-    };
-
     mockResumeRepo = {
       findOne: jest.fn().mockImplementation(async ({ where }: any) => {
         if (where.id === 'resume-uuid-1') {
@@ -90,10 +79,11 @@ describe('AtsScoreService', () => {
         }
         return null;
       }),
-    };
-
-    mockAccountRepo = {
-      findOne: jest.fn().mockResolvedValue(null),
+      create: jest.fn().mockImplementation((dto) => ({ id: 'tailored-resume-uuid-1', ...dto })),
+      save: jest.fn().mockImplementation(async (entity) => ({
+        updated_at: new Date(),
+        ...entity,
+      })),
     };
 
     mockAtsEvaluationRepo = {
@@ -116,14 +106,6 @@ describe('AtsScoreService', () => {
           useValue: mockResumeRepo,
         },
         {
-          provide: getRepositoryToken(User),
-          useValue: mockUserRepo,
-        },
-        {
-          provide: getRepositoryToken(Account),
-          useValue: mockAccountRepo,
-        },
-        {
           provide: getRepositoryToken(AtsEvaluation),
           useValue: mockAtsEvaluationRepo,
         },
@@ -131,40 +113,17 @@ describe('AtsScoreService', () => {
     }).compile();
 
     service = module.get<AtsScoreService>(AtsScoreService);
+    analyzerTool = module.get<AtsAnalyzerTool>(AtsAnalyzerTool);
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
-  describe('resolveUser', () => {
-    it('should throw UnauthorizedException if userIdentifier is empty', async () => {
-      await expect(service.resolveUser('')).rejects.toThrow(UnauthorizedException);
-    });
-
-    it('should resolve user by numeric ID', async () => {
-      const user = await service.resolveUser(1);
-      expect(user).toBeDefined();
-      expect(user.id).toBe(1);
-    });
-
-    it('should resolve user by email', async () => {
-      const user = await service.resolveUser('test@example.com');
-      expect(user).toBeDefined();
-      expect(user.email).toBe('test@example.com');
-    });
-
-    it('should throw UnauthorizedException if user is not found', async () => {
-      await expect(service.resolveUser('nonexistent@example.com')).rejects.toThrow(
-        UnauthorizedException,
-      );
-    });
-  });
-
   describe('checkAtsScore', () => {
     it('should throw NotFoundException if resume does not exist', async () => {
       await expect(
-        service.checkAtsScore(1, {
+        service.checkAtsScore(mockUser, {
           resumeId: 'non-existent-uuid',
           jobDescription: 'Software Engineer with TypeScript and React experience.',
         }),
@@ -173,7 +132,7 @@ describe('AtsScoreService', () => {
 
     it('should throw ForbiddenException if resume belongs to a different user', async () => {
       await expect(
-        service.checkAtsScore(1, {
+        service.checkAtsScore(mockUser, {
           resumeId: 'resume-other-user',
           jobDescription: 'Software Engineer with TypeScript and React experience.',
         }),
@@ -181,7 +140,7 @@ describe('AtsScoreService', () => {
     });
 
     it('should successfully evaluate ATS score for user owned resume', async () => {
-      const result = await service.checkAtsScore(1, {
+      const result = await service.checkAtsScore(mockUser, {
         resumeId: 'resume-uuid-1',
         jobDescription: 'We are looking for a Senior Software Engineer with TypeScript, NestJS, and AWS experience.',
       });
@@ -195,6 +154,63 @@ describe('AtsScoreService', () => {
       expect(result.matchedSkills).toContain('TypeScript');
       expect(result.matchedSkills).toContain('NestJS');
       expect(result.analyzedAt).toBeTruthy();
+    });
+  });
+
+  describe('tailorResume', () => {
+    it('should throw NotFoundException if resume does not exist', async () => {
+      await expect(
+        service.tailorResume(mockUser, {
+          resumeId: 'non-existent-uuid',
+          jobDescription: 'Software Engineer with TypeScript and React experience.',
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw ForbiddenException if resume belongs to a different user', async () => {
+      await expect(
+        service.tailorResume(mockUser, {
+          resumeId: 'resume-other-user',
+          jobDescription: 'Software Engineer with TypeScript and React experience.',
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should return a tailoredScore whose rank is derived from that same score, not from a separate heuristic blend', async () => {
+      const result = await service.tailorResume(mockUser, {
+        resumeId: 'resume-uuid-1',
+        jobDescription:
+          'We are looking for a Senior Software Engineer with TypeScript, NestJS, React, and AWS experience. AWS is required.',
+        confirmedSkills: ['AWS'],
+      });
+
+      expect(result).toBeDefined();
+      expect(result.tailoredScore).toBeGreaterThanOrEqual(result.originalScore);
+      expect(result.tailoredScore).toBeLessThanOrEqual(100);
+      // The rank must always be exactly what getRankFromScore derives from the
+      // reported score — no independently-computed score/rank pair.
+      expect(result.tailoredRank).toBe(analyzerTool.getRankFromScore(result.tailoredScore));
+      expect(result.scoreDifference).toBe(result.tailoredScore - result.originalScore);
+    });
+  });
+
+  describe('applyTailoredResume', () => {
+    it('should throw BadRequestException (not NotFoundException) for invalid tailored resume data', async () => {
+      await expect(
+        service.applyTailoredResume(mockUser, {
+          resumeId: 'resume-uuid-1',
+          tailoredData: null as any,
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw NotFoundException if resume does not exist', async () => {
+      await expect(
+        service.applyTailoredResume(mockUser, {
+          resumeId: 'non-existent-uuid',
+          tailoredData: { sections: {} },
+        }),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

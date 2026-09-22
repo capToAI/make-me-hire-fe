@@ -28,6 +28,7 @@ async function bootstrap(): Promise<void> {
     .setVersion('1.0')
     .addTag('Resume Builder', 'Endpoints for extracting and building resumes')
     .addTag('App', 'System health and status endpoints')
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

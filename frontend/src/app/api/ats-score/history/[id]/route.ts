@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { getBackendAuthHeaders } from "@/lib/serverAuth";
 import { NextResponse } from "next/server";
 
 const BACKEND_URL =
@@ -10,20 +10,9 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json(
-      { error: "Authentication required to view ATS evaluation" },
-      { status: 401 }
-    );
-  }
-
-  const userIdentifier = session.user.id || session.user.email;
-  if (!userIdentifier) {
-    return NextResponse.json(
-      { error: "User identity not found in session" },
-      { status: 401 }
-    );
+  const authResult = await getBackendAuthHeaders(request);
+  if (!authResult.ok) {
+    return NextResponse.json({ error: authResult.error }, { status: authResult.status });
   }
 
   const { id } = await params;
@@ -37,11 +26,7 @@ export async function GET(
   try {
     const response = await fetch(`${BACKEND_URL}/api/ats-score/history/${id}`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "x-user-id": String(userIdentifier),
-        "x-user-email": session.user.email || "",
-      },
+      headers: authResult.headers,
     });
 
     const data = await response.json();
@@ -57,20 +42,9 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json(
-      { error: "Authentication required to delete ATS evaluation" },
-      { status: 401 }
-    );
-  }
-
-  const userIdentifier = session.user.id || session.user.email;
-  if (!userIdentifier) {
-    return NextResponse.json(
-      { error: "User identity not found in session" },
-      { status: 401 }
-    );
+  const authResult = await getBackendAuthHeaders(request);
+  if (!authResult.ok) {
+    return NextResponse.json({ error: authResult.error }, { status: authResult.status });
   }
 
   const { id } = await params;
@@ -84,11 +58,7 @@ export async function DELETE(
   try {
     const response = await fetch(`${BACKEND_URL}/api/ats-score/history/${id}`, {
       method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        "x-user-id": String(userIdentifier),
-        "x-user-email": session.user.email || "",
-      },
+      headers: authResult.headers,
     });
 
     const data = await response.json();
