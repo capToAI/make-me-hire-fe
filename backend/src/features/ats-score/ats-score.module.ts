@@ -1,8 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { Account } from '../users/entities/account.entity';
-import { User } from '../users/entities/user.entity';
+import { AuthModule } from '../../shared/auth/auth.module';
 import { Resume } from '../resumes/entities/resume.entity';
 import { AtsEvaluation } from './entities/ats-evaluation.entity';
 import { AtsCheckAgent } from './agent/ats-check.agent';
@@ -17,7 +16,7 @@ import { AtsScoreService } from './services/ats-score.service';
  * resume tailoring workflows, and security-scoped resume analysis APIs.
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([Account, Resume, User, AtsEvaluation])],
+  imports: [TypeOrmModule.forFeature([Resume, AtsEvaluation]), AuthModule],
   controllers: [AtsScoreController],
   providers: [
     AtsAnalyzerTool,

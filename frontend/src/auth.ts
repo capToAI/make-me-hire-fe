@@ -71,6 +71,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       return token;
     },
+    // token.dbUserId is read server-side by lib/serverAuth.ts (via getToken())
+    // to mint short-lived backend access tokens. Never expose it via the
+    // session callback below — session is sent to client-side JS.
 
     async session({ session, token }) {
       if (session?.user) {

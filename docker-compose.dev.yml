@@ -35,6 +35,7 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
       PUPPETEER_EXECUTABLE_PATH: ${PUPPETEER_EXECUTABLE_PATH:-/usr/bin/chromium-browser}
+      AUTH_SECRET: ${AUTH_SECRET:-H22D6NnyMDx4QojdaceY+EqdYr/wNnNbT3Gadfu+sDs=}
     volumes:
       - ./backend:/app/backend
       - /app/node_modules

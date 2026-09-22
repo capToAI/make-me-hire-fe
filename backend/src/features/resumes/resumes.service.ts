@@ -3,12 +3,10 @@ import {
   Injectable,
   Logger,
   NotFoundException,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../users/entities/user.entity';
-import { Account } from '../users/entities/account.entity';
 import { Resume } from './entities/resume.entity';
 import { CreateResumeDto } from './dto/create-resume.dto';
 import { UpdateResumeDto } from './dto/update-resume.dto';
@@ -21,50 +19,7 @@ export class ResumesService {
   constructor(
     @InjectRepository(Resume)
     private readonly resumeRepository: Repository<Resume>,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-    @InjectRepository(Account)
-    private readonly accountRepository: Repository<Account>,
   ) {}
-
-  /**
-   * Resolves the authenticated User entity from a numeric ID, email, or Google provider account ID.
-   */
-  async resolveUser(userIdentifier?: string | number): Promise<User> {
-    if (!userIdentifier) {
-      throw new UnauthorizedException('Authentication required to access resumes');
-    }
-
-    const strId = String(userIdentifier).trim();
-    if (!strId) {
-      throw new UnauthorizedException('Authentication required to access resumes');
-    }
-
-    // 1. Try numeric ID if parseable
-    const numericId = Number(strId);
-    if (!isNaN(numericId) && numericId > 0) {
-      const user = await this.userRepository.findOne({ where: { id: numericId } });
-      if (user) return user;
-    }
-
-    // 2. Try email
-    if (strId.includes('@')) {
-      const user = await this.userRepository.findOne({ where: { email: strId } });
-      if (user) return user;
-    }
-
-    // 3. Try Google Provider Account ID
-    const account = await this.accountRepository.findOne({
-      where: { provider_account_id: strId },
-      relations: ['user'],
-    });
-    if (account?.user) {
-      return account.user;
-    }
-
-    this.logger.warn(`User could not be resolved from identifier: ${userIdentifier}`);
-    throw new UnauthorizedException('Authenticated user was not found');
-  }
 
   /**
    * Automatically extracts Resume Name and Position from ResumeState data.
@@ -112,11 +67,9 @@ export class ResumesService {
    * Creates a new resume belonging to the authenticated user.
    */
   async createResume(
-    userIdentifier: string | number,
+    user: User,
     dto: CreateResumeDto,
   ): Promise<ResumeResponseDto> {
-    const user = await this.resolveUser(userIdentifier);
-
     const defaultState = {
       sectionOrder: [
         'sec-basic-1',
@@ -195,11 +148,9 @@ export class ResumesService {
    * Retrieves all resumes owned by the authenticated user.
    */
   async getUserResumes(
-    userIdentifier: string | number,
+    user: User,
     type?: 'base' | 'tailored',
   ): Promise<ResumeListItemDto[]> {
-    const user = await this.resolveUser(userIdentifier);
-
     const where: any = { user_id: user.id };
     if (type) {
       where.resume_type = type;
@@ -227,11 +178,9 @@ export class ResumesService {
    * Retrieves a specific resume ensuring ownership validation.
    */
   async getResumeById(
-    userIdentifier: string | number,
+    user: User,
     resumeId: string,
   ): Promise<ResumeResponseDto> {
-    const user = await this.resolveUser(userIdentifier);
-
     const resume = await this.resumeRepository.findOne({
       where: { id: resumeId },
     });
@@ -254,12 +203,10 @@ export class ResumesService {
    * Updates an existing resume record with ownership validation.
    */
   async updateResume(
-    userIdentifier: string | number,
+    user: User,
     resumeId: string,
     dto: UpdateResumeDto,
   ): Promise<ResumeResponseDto> {
-    const user = await this.resolveUser(userIdentifier);
-
     const resume = await this.resumeRepository.findOne({
       where: { id: resumeId },
     });
@@ -304,11 +251,9 @@ export class ResumesService {
    * Deletes a resume with ownership validation.
    */
   async deleteResume(
-    userIdentifier: string | number,
+    user: User,
     resumeId: string,
   ): Promise<{ success: boolean; message: string }> {
-    const user = await this.resolveUser(userIdentifier);
-
     const resume = await this.resumeRepository.findOne({
       where: { id: resumeId },
     });

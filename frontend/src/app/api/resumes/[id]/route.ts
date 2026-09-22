@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { getBackendAuthHeaders } from "@/lib/serverAuth";
 import { NextResponse } from "next/server";
 
 const BACKEND_URL =
@@ -10,25 +10,17 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json(
-      { error: "Authentication required to view this resume" },
-      { status: 401 }
-    );
+  const authResult = await getBackendAuthHeaders(request);
+  if (!authResult.ok) {
+    return NextResponse.json({ error: authResult.error }, { status: authResult.status });
   }
 
   const { id } = await params;
-  const userIdentifier = session.user.id || session.user.email;
 
   try {
     const response = await fetch(`${BACKEND_URL}/api/resumes/${encodeURIComponent(id)}`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "x-user-id": String(userIdentifier),
-        "x-user-email": session.user.email || "",
-      },
+      headers: authResult.headers,
       cache: "no-store",
     });
 
@@ -44,26 +36,18 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json(
-      { error: "Authentication required to update this resume" },
-      { status: 401 }
-    );
+  const authResult = await getBackendAuthHeaders(request);
+  if (!authResult.ok) {
+    return NextResponse.json({ error: authResult.error }, { status: authResult.status });
   }
 
   const { id } = await params;
-  const userIdentifier = session.user.id || session.user.email;
 
   try {
     const body = await request.json();
     const response = await fetch(`${BACKEND_URL}/api/resumes/${encodeURIComponent(id)}`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "x-user-id": String(userIdentifier),
-        "x-user-email": session.user.email || "",
-      },
+      headers: authResult.headers,
       body: JSON.stringify(body),
     });
 
@@ -79,25 +63,17 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json(
-      { error: "Authentication required to delete this resume" },
-      { status: 401 }
-    );
+  const authResult = await getBackendAuthHeaders(request);
+  if (!authResult.ok) {
+    return NextResponse.json({ error: authResult.error }, { status: authResult.status });
   }
 
   const { id } = await params;
-  const userIdentifier = session.user.id || session.user.email;
 
   try {
     const response = await fetch(`${BACKEND_URL}/api/resumes/${encodeURIComponent(id)}`, {
       method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        "x-user-id": String(userIdentifier),
-        "x-user-email": session.user.email || "",
-      },
+      headers: authResult.headers,
     });
 
     const data = await response.json();

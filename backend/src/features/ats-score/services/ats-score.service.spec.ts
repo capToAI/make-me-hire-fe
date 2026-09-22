@@ -1,10 +1,9 @@
-import { ForbiddenException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 
 import { Repository } from 'typeorm';
 
-import { Account } from '../../users/entities/account.entity';
 import { User } from '../../users/entities/user.entity';
 import { Resume } from '../../resumes/entities/resume.entity';
 import { AtsEvaluation } from '../entities/ats-evaluation.entity';
@@ -17,8 +16,6 @@ import { AtsScoreService } from './ats-score.service';
 describe('AtsScoreService', () => {
   let service: AtsScoreService;
   let mockResumeRepo: Partial<Record<keyof Repository<Resume>, jest.Mock>>;
-  let mockUserRepo: Partial<Record<keyof Repository<User>, jest.Mock>>;
-  let mockAccountRepo: Partial<Record<keyof Repository<Account>, jest.Mock>>;
   let mockAtsEvaluationRepo: Partial<Record<keyof Repository<AtsEvaluation>, jest.Mock>>;
 
   const mockUser: User = {
@@ -71,15 +68,6 @@ describe('AtsScoreService', () => {
   };
 
   beforeEach(async () => {
-    mockUserRepo = {
-      findOne: jest.fn().mockImplementation(async ({ where }: any) => {
-        if (where.id === 1 || where.email === 'test@example.com') {
-          return mockUser;
-        }
-        return null;
-      }),
-    };
-
     mockResumeRepo = {
       findOne: jest.fn().mockImplementation(async ({ where }: any) => {
         if (where.id === 'resume-uuid-1') {
@@ -90,10 +78,6 @@ describe('AtsScoreService', () => {
         }
         return null;
       }),
-    };
-
-    mockAccountRepo = {
-      findOne: jest.fn().mockResolvedValue(null),
     };
 
     mockAtsEvaluationRepo = {
@@ -116,14 +100,6 @@ describe('AtsScoreService', () => {
           useValue: mockResumeRepo,
         },
         {
-          provide: getRepositoryToken(User),
-          useValue: mockUserRepo,
-        },
-        {
-          provide: getRepositoryToken(Account),
-          useValue: mockAccountRepo,
-        },
-        {
           provide: getRepositoryToken(AtsEvaluation),
           useValue: mockAtsEvaluationRepo,
         },
@@ -137,34 +113,10 @@ describe('AtsScoreService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('resolveUser', () => {
-    it('should throw UnauthorizedException if userIdentifier is empty', async () => {
-      await expect(service.resolveUser('')).rejects.toThrow(UnauthorizedException);
-    });
-
-    it('should resolve user by numeric ID', async () => {
-      const user = await service.resolveUser(1);
-      expect(user).toBeDefined();
-      expect(user.id).toBe(1);
-    });
-
-    it('should resolve user by email', async () => {
-      const user = await service.resolveUser('test@example.com');
-      expect(user).toBeDefined();
-      expect(user.email).toBe('test@example.com');
-    });
-
-    it('should throw UnauthorizedException if user is not found', async () => {
-      await expect(service.resolveUser('nonexistent@example.com')).rejects.toThrow(
-        UnauthorizedException,
-      );
-    });
-  });
-
   describe('checkAtsScore', () => {
     it('should throw NotFoundException if resume does not exist', async () => {
       await expect(
-        service.checkAtsScore(1, {
+        service.checkAtsScore(mockUser, {
           resumeId: 'non-existent-uuid',
           jobDescription: 'Software Engineer with TypeScript and React experience.',
         }),
@@ -173,7 +125,7 @@ describe('AtsScoreService', () => {
 
     it('should throw ForbiddenException if resume belongs to a different user', async () => {
       await expect(
-        service.checkAtsScore(1, {
+        service.checkAtsScore(mockUser, {
           resumeId: 'resume-other-user',
           jobDescription: 'Software Engineer with TypeScript and React experience.',
         }),
@@ -181,7 +133,7 @@ describe('AtsScoreService', () => {
     });
 
     it('should successfully evaluate ATS score for user owned resume', async () => {
-      const result = await service.checkAtsScore(1, {
+      const result = await service.checkAtsScore(mockUser, {
         resumeId: 'resume-uuid-1',
         jobDescription: 'We are looking for a Senior Software Engineer with TypeScript, NestJS, and AWS experience.',
       });

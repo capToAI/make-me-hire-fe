@@ -1,6 +1,8 @@
-import { UnauthorizedException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 
+import { AuthGuard } from '../../../shared/auth/auth.guard';
+import { User } from '../../users/entities/user.entity';
+import { UsersService } from '../../users/users.service';
 import { AtsScoreResponseDto } from '../models/ats-score-response.dto';
 import { CheckAtsScoreDto } from '../models/check-ats-score.dto';
 import { AtsScoreService } from '../services/ats-score.service';
@@ -9,6 +11,8 @@ import { AtsScoreController } from './ats-score.controller';
 describe('AtsScoreController', () => {
   let controller: AtsScoreController;
   let service: AtsScoreService;
+
+  const mockUser: User = { id: 1, email: 'test@example.com' } as User;
 
   const mockResponse: AtsScoreResponseDto = {
     score: 85,
@@ -37,6 +41,11 @@ describe('AtsScoreController', () => {
             checkAtsScore: jest.fn().mockResolvedValue(mockResponse),
           },
         },
+        AuthGuard,
+        {
+          provide: UsersService,
+          useValue: { getUserById: jest.fn().mockResolvedValue(mockUser) },
+        },
       ],
     }).compile();
 
@@ -48,38 +57,15 @@ describe('AtsScoreController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('should throw UnauthorizedException when no auth headers are provided', async () => {
+  it('delegates to atsScoreService with the authenticated user resolved by AuthGuard', async () => {
     const dto: CheckAtsScoreDto = {
       resumeId: 'resume-uuid-1',
       jobDescription: 'Software Engineer requirements and qualifications description.',
     };
 
-    await expect(controller.checkAtsScore({}, dto)).rejects.toThrow(UnauthorizedException);
-  });
-
-  it('should accept x-user-id header and delegate to atsScoreService', async () => {
-    const dto: CheckAtsScoreDto = {
-      resumeId: 'resume-uuid-1',
-      jobDescription: 'Software Engineer requirements and qualifications description.',
-    };
-
-    const headers = { 'x-user-id': '1' };
-    const result = await controller.checkAtsScore(headers, dto);
+    const result = await controller.checkAtsScore(mockUser, dto);
 
     expect(result).toEqual(mockResponse);
-    expect(service.checkAtsScore).toHaveBeenCalledWith('1', dto);
-  });
-
-  it('should accept Bearer token authorization header', async () => {
-    const dto: CheckAtsScoreDto = {
-      resumeId: 'resume-uuid-1',
-      jobDescription: 'Software Engineer requirements and qualifications description.',
-    };
-
-    const headers = { authorization: 'Bearer user-token-123' };
-    const result = await controller.checkAtsScore(headers, dto);
-
-    expect(result).toEqual(mockResponse);
-    expect(service.checkAtsScore).toHaveBeenCalledWith('user-token-123', dto);
+    expect(service.checkAtsScore).toHaveBeenCalledWith(mockUser, dto);
   });
 });

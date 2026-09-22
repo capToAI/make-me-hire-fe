@@ -3,16 +3,15 @@ import {
   Controller,
   Delete,
   Get,
-  Headers,
   HttpCode,
   HttpStatus,
   Param,
   Post,
   Query,
-  UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
 import {
-  ApiHeader,
+  ApiBearerAuth,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -20,6 +19,9 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
+import { AuthGuard } from '../../../shared/auth/auth.guard';
+import { CurrentUser } from '../../../shared/auth/current-user.decorator';
+import { User } from '../../users/entities/user.entity';
 import { AtsEvaluation } from '../entities/ats-evaluation.entity';
 import { AtsScoreResponseDto } from '../models/ats-score-response.dto';
 import { CheckAtsScoreDto } from '../models/check-ats-score.dto';
@@ -36,38 +38,10 @@ import { AtsScoreService } from '../services/ats-score.service';
  */
 @ApiTags('ATS Score')
 @Controller('api/ats-score')
-@ApiHeader({
-  name: 'x-user-id',
-  description: 'Authenticated User ID or Email',
-  required: false,
-})
+@ApiBearerAuth()
+@UseGuards(AuthGuard)
 export class AtsScoreController {
   constructor(private readonly atsScoreService: AtsScoreService) {}
-
-  /**
-   * Helper to extract the authenticated user identifier from request headers.
-   */
-  private extractUserIdentifier(headers: Record<string, string | undefined>): string {
-    const xUserId = headers['x-user-id'] || headers['X-User-Id'];
-    if (xUserId && xUserId.trim()) {
-      return xUserId.trim();
-    }
-
-    const xUserEmail = headers['x-user-email'] || headers['X-User-Email'];
-    if (xUserEmail && xUserEmail.trim()) {
-      return xUserEmail.trim();
-    }
-
-    const authHeader = headers['authorization'] || headers['Authorization'];
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7).trim();
-      if (token) return token;
-    }
-
-    throw new UnauthorizedException(
-      'Authentication required. Missing x-user-id, x-user-email, or Authorization header.',
-    );
-  }
 
   @Post('check')
   @HttpCode(HttpStatus.OK)
@@ -102,11 +76,10 @@ export class AtsScoreController {
     description: 'Internal Server Error - Failure during ATS evaluation',
   })
   async checkAtsScore(
-    @Headers() headers: Record<string, string | undefined>,
+    @CurrentUser() user: User,
     @Body() dto: CheckAtsScoreDto,
   ): Promise<AtsScoreResponseDto> {
-    const userIdentifier = this.extractUserIdentifier(headers);
-    return this.atsScoreService.checkAtsScore(userIdentifier, dto);
+    return this.atsScoreService.checkAtsScore(user, dto);
   }
 
   @Post('tailor')
@@ -126,11 +99,10 @@ export class AtsScoreController {
   @ApiResponse({ status: 403, description: 'Forbidden - User does not own resume' })
   @ApiResponse({ status: 404, description: 'Not Found - Resume not found' })
   async tailorResume(
-    @Headers() headers: Record<string, string | undefined>,
+    @CurrentUser() user: User,
     @Body() dto: TailorResumeDto,
   ): Promise<TailoredResumeResponseDto> {
-    const userIdentifier = this.extractUserIdentifier(headers);
-    return this.atsScoreService.tailorResume(userIdentifier, dto);
+    return this.atsScoreService.tailorResume(user, dto);
   }
 
   @Post('apply-tailored')
@@ -148,11 +120,10 @@ export class AtsScoreController {
   @ApiResponse({ status: 403, description: 'Forbidden - User does not own resume' })
   @ApiResponse({ status: 404, description: 'Not Found - Resume not found' })
   async applyTailoredResume(
-    @Headers() headers: Record<string, string | undefined>,
+    @CurrentUser() user: User,
     @Body() dto: ApplyTailoredResumeDto,
   ): Promise<{ success: boolean; message: string; resumeId: string }> {
-    const userIdentifier = this.extractUserIdentifier(headers);
-    const updated = await this.atsScoreService.applyTailoredResume(userIdentifier, dto);
+    const updated = await this.atsScoreService.applyTailoredResume(user, dto);
     return {
       success: true,
       message: 'Tailored resume applied successfully',
@@ -183,14 +154,13 @@ export class AtsScoreController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getEvaluationHistory(
-    @Headers() headers: Record<string, string | undefined>,
+    @CurrentUser() user: User,
     @Query('resumeId') resumeId?: string,
     @Query('limit') limit?: string,
   ): Promise<AtsEvaluation[]> {
-    const userIdentifier = this.extractUserIdentifier(headers);
     const parsedLimit = limit ? parseInt(limit, 10) : 20;
     return this.atsScoreService.getEvaluationHistory(
-      userIdentifier,
+      user,
       resumeId,
       isNaN(parsedLimit) ? 20 : parsedLimit,
     );
@@ -215,11 +185,10 @@ export class AtsScoreController {
   @ApiResponse({ status: 403, description: 'Forbidden - User does not own this evaluation' })
   @ApiResponse({ status: 404, description: 'Not Found - Evaluation not found' })
   async getEvaluationById(
-    @Headers() headers: Record<string, string | undefined>,
+    @CurrentUser() user: User,
     @Param('id') id: string,
   ): Promise<AtsEvaluation> {
-    const userIdentifier = this.extractUserIdentifier(headers);
-    return this.atsScoreService.getEvaluationById(userIdentifier, id);
+    return this.atsScoreService.getEvaluationById(user, id);
   }
 
   @Delete('history/:id')
@@ -240,11 +209,10 @@ export class AtsScoreController {
   @ApiResponse({ status: 403, description: 'Forbidden - User does not own this evaluation' })
   @ApiResponse({ status: 404, description: 'Not Found - Evaluation not found' })
   async deleteEvaluation(
-    @Headers() headers: Record<string, string | undefined>,
+    @CurrentUser() user: User,
     @Param('id') id: string,
   ): Promise<{ success: boolean; message: string }> {
-    const userIdentifier = this.extractUserIdentifier(headers);
-    return this.atsScoreService.deleteEvaluation(userIdentifier, id);
+    return this.atsScoreService.deleteEvaluation(user, id);
   }
 }
 

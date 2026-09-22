@@ -1,8 +1,7 @@
-import { ForbiddenException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Account } from '../users/entities/account.entity';
 import { User } from '../users/entities/user.entity';
 import { Resume } from './entities/resume.entity';
 import { ResumesService } from './resumes.service';
@@ -10,8 +9,6 @@ import { ResumesService } from './resumes.service';
 describe('ResumesService', () => {
   let service: ResumesService;
   let mockResumeRepo: Partial<Record<keyof Repository<Resume>, jest.Mock>>;
-  let mockUserRepo: Partial<Record<keyof Repository<User>, jest.Mock>>;
-  let mockAccountRepo: Partial<Record<keyof Repository<Account>, jest.Mock>>;
 
   const mockUser1: User = {
     id: 1,
@@ -63,23 +60,6 @@ describe('ResumesService', () => {
       },
     ];
 
-    mockUserRepo = {
-      findOne: jest.fn().mockImplementation(async ({ where }) => {
-        if (where.id === 1 || where.email === 'user1@example.com') return mockUser1;
-        if (where.id === 2 || where.email === 'user2@example.com') return mockUser2;
-        return null;
-      }),
-    };
-
-    mockAccountRepo = {
-      findOne: jest.fn().mockImplementation(async ({ where }) => {
-        if (where.provider_account_id === 'google-sub-1') {
-          return { id: 1, user_id: 1, provider: 'google', provider_account_id: 'google-sub-1', user: mockUser1 };
-        }
-        return null;
-      }),
-    };
-
     mockResumeRepo = {
       create: jest.fn().mockImplementation((dto) => ({
         id: 'new-uuid-123',
@@ -116,14 +96,6 @@ describe('ResumesService', () => {
           provide: getRepositoryToken(Resume),
           useValue: mockResumeRepo,
         },
-        {
-          provide: getRepositoryToken(User),
-          useValue: mockUserRepo,
-        },
-        {
-          provide: getRepositoryToken(Account),
-          useValue: mockAccountRepo,
-        },
       ],
     }).compile();
 
@@ -136,7 +108,7 @@ describe('ResumesService', () => {
 
   describe('createResume', () => {
     it('should create a resume linked to the authenticated user', async () => {
-      const result = await service.createResume(1, {
+      const result = await service.createResume(mockUser1, {
         name: 'My New Resume',
         position: 'Lead Architect',
       });
@@ -148,7 +120,7 @@ describe('ResumesService', () => {
     });
 
     it('should automatically extract name and position from resume data if omitted', async () => {
-      const result = await service.createResume(1, {
+      const result = await service.createResume(mockUser1, {
         data: {
           sectionOrder: ['sec-basic-1'],
           sections: {
@@ -170,22 +142,16 @@ describe('ResumesService', () => {
       expect(result.name).toBe('Alex Johnson Resume');
       expect(result.position).toBe('Cloud Architect');
     });
-
-    it('should throw UnauthorizedException if user does not exist', async () => {
-      await expect(
-        service.createResume(999, { name: 'Fail', position: 'Dev' }),
-      ).rejects.toThrow(UnauthorizedException);
-    });
   });
 
   describe('getUserResumes', () => {
     it('should only return resumes belonging to the authenticated user', async () => {
-      const user1Resumes = await service.getUserResumes(1);
+      const user1Resumes = await service.getUserResumes(mockUser1);
       expect(user1Resumes).toHaveLength(1);
       expect(user1Resumes[0].name).toBe('Aswani Resume');
       expect(user1Resumes[0].userId).toBe(1);
 
-      const user2Resumes = await service.getUserResumes(2);
+      const user2Resumes = await service.getUserResumes(mockUser2);
       expect(user2Resumes).toHaveLength(1);
       expect(user2Resumes[0].name).toBe('Frontend Resume');
       expect(user2Resumes[0].userId).toBe(2);
@@ -194,7 +160,7 @@ describe('ResumesService', () => {
 
   describe('getResumeById', () => {
     it('should return resume when owned by the user', async () => {
-      const resume = await service.getResumeById(1, 'res-uuid-1');
+      const resume = await service.getResumeById(mockUser1, 'res-uuid-1');
       expect(resume).toBeDefined();
       expect(resume.id).toBe('res-uuid-1');
       expect(resume.name).toBe('Aswani Resume');
@@ -202,13 +168,13 @@ describe('ResumesService', () => {
 
     it('should throw ForbiddenException when user tries to access another users resume', async () => {
       // User 2 attempts to read User 1's resume
-      await expect(service.getResumeById(2, 'res-uuid-1')).rejects.toThrow(
+      await expect(service.getResumeById(mockUser2, 'res-uuid-1')).rejects.toThrow(
         ForbiddenException,
       );
     });
 
     it('should throw NotFoundException when resume does not exist', async () => {
-      await expect(service.getResumeById(1, 'non-existent-uuid')).rejects.toThrow(
+      await expect(service.getResumeById(mockUser1, 'non-existent-uuid')).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -216,7 +182,7 @@ describe('ResumesService', () => {
 
   describe('updateResume', () => {
     it('should update resume metadata and content when owned by user', async () => {
-      const updated = await service.updateResume(1, 'res-uuid-1', {
+      const updated = await service.updateResume(mockUser1, 'res-uuid-1', {
         name: 'Aswani Resume Updated',
         position: 'Principal Engineer',
       });
@@ -226,7 +192,7 @@ describe('ResumesService', () => {
     });
 
     it('should automatically sync name and position when resume data changes', async () => {
-      const updated = await service.updateResume(1, 'res-uuid-1', {
+      const updated = await service.updateResume(mockUser1, 'res-uuid-1', {
         data: {
           sectionOrder: ['sec-basic-1'],
           sections: {
@@ -251,23 +217,23 @@ describe('ResumesService', () => {
     it('should throw ForbiddenException when user tries to update another users resume', async () => {
       // User 1 attempts to update User 2's resume
       await expect(
-        service.updateResume(1, 'res-uuid-2', { name: 'Hacked' }),
+        service.updateResume(mockUser1, 'res-uuid-2', { name: 'Hacked' }),
       ).rejects.toThrow(ForbiddenException);
     });
   });
 
   describe('deleteResume', () => {
     it('should delete resume when owned by user', async () => {
-      const res = await service.deleteResume(1, 'res-uuid-1');
+      const res = await service.deleteResume(mockUser1, 'res-uuid-1');
       expect(res.success).toBe(true);
 
-      const list = await service.getUserResumes(1);
+      const list = await service.getUserResumes(mockUser1);
       expect(list).toHaveLength(0);
     });
 
     it('should throw ForbiddenException when user tries to delete another users resume', async () => {
       // User 2 attempts to delete User 1's resume
-      await expect(service.deleteResume(2, 'res-uuid-1')).rejects.toThrow(
+      await expect(service.deleteResume(mockUser2, 'res-uuid-1')).rejects.toThrow(
         ForbiddenException,
       );
     });
